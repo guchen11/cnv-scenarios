@@ -1,0 +1,80 @@
+apiVersion: kubevirt.io/v1
+kind: VirtualMachine
+metadata:
+  labels:
+    kubevirt-vm: vm-{{.name}}-{{.Replica}}
+    test-type: minimal-resources
+  {{range $key, $value := .vmLabels }}
+    {{ $key }}: {{ $value }}
+  {{end}}
+  name: {{.name}}-{{.Replica}}
+spec:
+  running: {{.VMIrunning}}
+  template:
+    metadata:
+      labels:
+        kubevirt-vm: vm-{{.name}}-{{.Replica}}
+        kubevirt.io/os: {{.OS}}
+        test-type: minimal-resources
+      {{range $key, $value := .vmLabels }}
+        {{ $key }}: {{ $value }}
+      {{end}}
+    spec:
+      {{- if .nodeSelector }}
+      nodeSelector:
+        {{ .nodeSelector }}
+      {{- end }}
+      domain:
+        cpu:
+          cores: 1
+        devices:
+          disks:
+          - disk:
+              bus: virtio
+            name: rootdisk
+          - disk:
+              bus: virtio
+            name: cloudinitdisk
+          interfaces:
+          - masquerade: {}
+            model: virtio
+            name: default
+          networkInterfaceMultiqueue: false
+          rng: {}
+        resources:
+          requests:
+            memory: {{.memory}}
+            cpu: {{.cpuRequest}}
+          limits:
+            memory: {{.memory}}
+            cpu: {{.cpuLimit}}
+      networks:
+      - name: default
+        pod: {}
+      volumes:
+      - dataVolume:
+          name: dvclone-{{.Replica}}
+        name: rootdisk
+      - cloudInitNoCloud:
+          userData: |-
+            #cloud-config
+            password: gocubsgo
+            chpasswd:
+              expire: false
+            ssh_pwauth: true
+        name: cloudinitdisk
+  dataVolumeTemplates:
+  - metadata:
+      name: dvclone-{{.Replica}}
+    spec:
+      source:
+        registry:
+          url: "docker://quay.io/kubevirt/cirros-container-disk-demo:latest"
+      storage:
+        accessModes:
+        - ReadWriteOnce
+        resources:
+          requests:
+            storage: {{.storage}}
+        storageClassName: {{.storageclass}}
+        volumeMode: {{.volumemode}}

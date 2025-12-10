@@ -1,0 +1,101 @@
+{{- $PROM := .PROM -}}
+{{- $PROM_TOKEN := .PROM_TOKEN -}}
+{{- $kubeBurnerFQDN := "kube-burner.io" -}}
+{{- $testName := "disk-limits-test" }}
+{{- $nsName := .testNamespace | default "disk-limits-test" -}}
+{{- $vmCount := .vmCount | default 1 -}}
+{{- $vmName := "disk-test-vm" -}}
+{{- $sshPublicKeySecretName := $vmName -}}
+{{- $jobCounterLabelKey := (list $testName "." $kubeBurnerFQDN "/counter") | join "" -}}
+{{- $jobCounterLabelValue := (list "counter-" (.counter | toString )) | join "" -}}
+{{- $testNamespacesLabelKey := (list $kubeBurnerFQDN "/test-name") | join "" -}}
+{{- $testNamespacesLabelValue := $testName -}}
+{{- $metricsBaseDirectory := $testName -}}
+---
+global:
+  measurements:
+  - name: vmiLatency
+  - name: pvcLatency
+
+metricsEndpoints:
+- indexer:
+    type: local
+    metricsDirectory: "{{ .resultsPath }}/{{ .runTimestamp }}/iteration-{{ .counter | toString }}"
+{{- if .esServer }}
+- endpoint: {{ .PROM }}
+  token: {{ .PROM_TOKEN }}
+  metrics: [../../config/metrics-profiles/kubevirt-metrics.yaml]
+  indexer:
+    type: elastic
+    defaultIndex: {{ .testName }}
+    esServers: [{{ .esServer }}]
+    insecureSkipVerify: true
+{{- end }}
+
+jobs:
+# Run cleanup only when counter is 0
+{{ if eq (.counter | int) 0 }}
+- name: start-fresh
+  jobType: delete
+  waitForDeletion: true
+  qps: 5
+  burst: 10
+  objects:
+  - kind: Namespace
+    labelSelector:
+      {{ $testNamespacesLabelKey }}: {{ $testNamespacesLabelValue }}
+{{ end }}
+
+- name: disk-limits-test
+  jobType: create
+  jobIterations: 1
+  qps: 2
+  burst: 5
+  namespacedIterations: false
+  namespace: {{ $nsName }}
+  namespaceLabels:
+    {{ $testNamespacesLabelKey }}: {{ $testNamespacesLabelValue }}
+  # verify object count after running each job
+  verifyObjects: true
+  errorOnVerify: true
+  # interval between jobs execution
+  jobIterationDelay: 20s
+  # wait all VMI be in the Ready Condition
+  waitWhenFinished: false
+  podWait: true
+  maxWaitTimeout: {{ .maxWaitTimeout | default "60m" }}
+  jobPause: {{ .jobPause | default "10m" }}
+  cleanup: false
+  # Set missing key as empty to allow using default values
+  defaultMissingKeysWithZero: true
+  beforeCleanup: "../../config/scripts/wrapper.sh check_disk_limits {{ $jobCounterLabelKey }} {{ $jobCounterLabelValue }} {{ $nsName }} {{ .diskCount | default 1 }} {{ .diskSize }} {{ .privateKey }} {{ .vmUser }} {{ .resultsPath }}/{{ .runTimestamp }}/iteration-{{ .counter }}"
+  objects:
+  - objectTemplate: templates/secret_ssh_public.yml
+    runOnce: true
+    replicas: 1
+    inputVars:
+      name: {{ $sshPublicKeySecretName }}
+      counter: {{ .counter | toString }}
+      publicKey: {{ .publicKey }}
+  - objectTemplate: vm-disk-template.yml
+    replicas: {{ $vmCount }}
+    waitOptions:
+      labelSelector:
+        {{ $jobCounterLabelKey }}: {{ $jobCounterLabelValue }}
+    inputVars:
+      name: {{ $vmName }}
+      counter: {{ .counter | toString }}
+      OS: fedora
+      cpuCores: {{ .cpuCores | default 16 }}
+      memory: {{ .memory | default "32Gi" }}
+      url: {{ .imageUrl | default "https://dl.fedoraproject.org/pub/fedora/linux/releases/42/Cloud/x86_64/images/Fedora-Cloud-Base-Generic-42-1.1.x86_64.qcow2" }}
+      # Disk configuration - can be overridden via CLI
+      diskCount: {{ .diskCount | default 1 }}
+      storage: {{ .diskSize | default "10Gi" }}
+      storageclass: {{ .storageClassName | default "ocs-storagecluster-ceph-rbd" }}
+      volumemode: {{ .volumeMode | default "Block" }}
+      VMIrunning: {{ .vmRunning | default true }}
+      nodeSelector: {{ .nodeSelector | default "" }}
+      sshPublicKeySecret: {{ $sshPublicKeySecretName }}
+      vmLabels:
+        {{ $jobCounterLabelKey }}: {{ $jobCounterLabelValue }}

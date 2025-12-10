@@ -1,0 +1,210 @@
+{{- $PROM := .PROM -}}
+{{- $PROM_TOKEN := .PROM_TOKEN -}}
+{{- $kubeBurnerFQDN := "kube-burner.io" -}}
+{{- $testName := "nic-hotplug-test" }}
+{{- $nsName := .testNamespace | default "nic-hotplug-test" -}}
+{{- $nicCount := .nicCount | default 25 -}}
+{{- $sshPublicKeySecretName := "multi-nic-vm" -}}
+{{- $jobCounterLabelKey := (list $testName "." $kubeBurnerFQDN "/counter") | join "" -}}
+{{- $jobCounterLabelValue := (list "counter-" (.counter | toString )) | join "" -}}
+{{- $testNamespacesLabelKey := (list $kubeBurnerFQDN "/test-name") | join "" -}}
+{{- $testNamespacesLabelValue := $testName -}}
+{{- $metricsBaseDirectory := $testName -}}
+---
+global:
+  measurements:
+  - name: vmiLatency
+  - name: pvcLatency
+
+metricsEndpoints:
+- indexer:
+    type: local
+    metricsDirectory: "{{ .resultsPath }}/{{ .runTimestamp }}/iteration-{{ .counter | toString }}"
+{{- if .esServer }}
+- endpoint: {{ .PROM }}
+  token: {{ .PROM_TOKEN }}
+  metrics: [../../config/metrics-profiles/kubevirt-metrics.yaml]
+  indexer:
+    type: elastic
+    defaultIndex: {{ .testName }}
+    esServers: [{{ .esServer }}]
+    insecureSkipVerify: true
+{{- end }}
+
+jobs:
+# Run cleanup only when counter is 0
+{{ if eq (.counter | int) 0 }}
+- name: start-fresh
+  jobType: delete
+  waitForDeletion: true
+  qps: 5
+  burst: 10
+  objects:
+  - kind: Namespace
+    labelSelector:
+      {{ $testNamespacesLabelKey }}: {{ $testNamespacesLabelValue }}
+{{ end }}
+
+# Create Simple Bridge NodeNetworkConfigurationPolicies
+- name: create-simple-bridge-nncp
+  jobType: create
+  jobIterations: 1
+  qps: 5
+  burst: 10
+  namespacedIterations: false
+  verifyObjects: true
+  errorOnVerify: true
+  maxWaitTimeout: 15m
+  jobPause: 30s
+  objects:
+  - objectTemplate: NodeNetworkConfigurationPolicy.json
+    replicas: {{ $nicCount }}
+    inputVars:
+      state: "up"
+
+# Create VLAN Bridge NodeNetworkConfigurationPolicies  
+- name: create-vlan-bridge-nncp
+  jobType: create
+  jobIterations: 1
+  qps: 5
+  burst: 10
+  namespacedIterations: false
+  verifyObjects: true
+  errorOnVerify: true
+  maxWaitTimeout: 15m
+  jobPause: 30s
+  objects:
+  - objectTemplate: NodeNetworkConfigurationPolicyWithVLAN.json
+    replicas: {{ $nicCount }}
+    inputVars:
+      state: "up"
+      base_interface: {{ .baseInterface | default "ens1f1" }}
+
+# Create Simple Bridge NetworkAttachmentDefinitions
+- name: create-network-attachments-simple
+  jobType: create
+  jobIterations: 1
+  qps: 10
+  burst: 20
+  namespacedIterations: false
+  namespace: {{ $nsName }}
+  namespaceLabels:
+    {{ $testNamespacesLabelKey }}: {{ $testNamespacesLabelValue }}
+  verifyObjects: true
+  errorOnVerify: true
+  maxWaitTimeout: 30m
+  jobPause: 2m
+  objects:
+  - objectTemplate: network-attachment-def-simple.yml
+    replicas: {{ $nicCount }}
+    inputVars:
+      name: test-network
+
+# Create VLAN Bridge NetworkAttachmentDefinitions
+- name: create-network-attachments-vlan
+  jobType: create
+  jobIterations: 1
+  qps: 10
+  burst: 20
+  namespacedIterations: false
+  namespace: {{ $nsName }}
+  namespaceLabels:
+    {{ $testNamespacesLabelKey }}: {{ $testNamespacesLabelValue }}
+  verifyObjects: true
+  errorOnVerify: true
+  maxWaitTimeout: 30m
+  jobPause: 1m
+  objects:
+  - objectTemplate: network-attachment-def-vlan.yml
+    replicas: {{ $nicCount }}
+    inputVars:
+      name: test-network
+
+# Create 1 VM with Simple Bridge NICs and 1 with VLAN Bridge NICs
+- name: create-multi-nic-vm-simple
+  jobType: create
+  jobIterations: 1
+  qps: 5
+  burst: 10
+  namespacedIterations: false
+  namespace: {{ $nsName }}
+  namespaceLabels:
+    {{ $testNamespacesLabelKey }}: {{ $testNamespacesLabelValue }}
+  # verify object count after running each job
+  verifyObjects: true
+  errorOnVerify: true
+  # interval between jobs execution
+  jobIterationDelay: 20s
+  # wait all VMI be in the Ready Condition
+  waitWhenFinished: false
+  podWait: true
+  maxWaitTimeout: {{ .maxWaitTimeout | default "45m" }}
+  jobPause: {{ .jobPause | default "2m" }}
+  cleanup: false
+  # Set missing key as empty to allow using default values
+  defaultMissingKeysWithZero: true
+  beforeCleanup: "../../config/scripts/wrapper.sh check_nic_hotplug {{ $jobCounterLabelKey }} {{ $jobCounterLabelValue }} {{ $nsName }} {{ $nicCount }} {{ .privateKey }} {{ .vmUser }} true {{ .resultsPath }}/{{ .runTimestamp }}/iteration-{{ .counter }}"
+  objects:
+  - objectTemplate: templates/secret_ssh_public.yml
+    runOnce: true
+    replicas: 1
+    inputVars:
+      name: {{ $sshPublicKeySecretName }}
+      counter: {{ .counter | toString }}
+      publicKey: {{ .publicKey }}
+  # Create VM with Simple Bridge NICs
+  - objectTemplate: vm-multi-nic-simple.yml
+    replicas: 1
+    inputVars:
+      name: multi-nic-simple-vm
+      OS: rhel9
+      cpuCores: 8
+      memory: 16Gi
+      storage: 50Gi
+      storageclass: {{ .storageClassName | default "ocs-storagecluster-ceph-rbd" }}
+      volumemode: Block
+      nicCount: {{ $nicCount }}
+      nodeSelector: {{ .nodeSelector | default "" }}
+      sshPublicKeySecret: {{ $sshPublicKeySecretName }}
+      counter: {{ .counter | toString }}
+      vmLabels:
+        {{ $jobCounterLabelKey }}: {{ $jobCounterLabelValue }}
+  # Create VM with VLAN Bridge NICs
+  - objectTemplate: vm-multi-nic-vlan.yml
+    replicas: 1
+    inputVars:
+        name: multi-nic-vlan-vm
+        OS: rhel9
+        cpuCores: 8
+        memory: 16Gi
+        storage: 50Gi
+        storageclass: {{ .storageClassName | default "ocs-storagecluster-ceph-rbd" }}
+        volumemode: Block
+        nicCount: {{ $nicCount }}
+        nodeSelector: {{ .nodeSelector | default "" }}
+        sshPublicKeySecret: {{ $sshPublicKeySecretName }}
+        counter: {{ .counter | toString }}
+        vmLabels:
+          {{ $jobCounterLabelKey }}: {{ $jobCounterLabelValue }}
+
+# Cleanup NNCP resources if flag is set
+{{ if .cleanupNncp | default false }}
+- name: cleanup-nncps
+  jobType: create
+  jobIterations: 1
+  namespace: {{ $nsName }}
+  qps: 1
+  burst: 1
+  cleanup: true
+  preLoadPeriod: 0s
+  jobPause: 10s
+  # Run the cleanup script that patches to absent and deletes
+  beforeCleanup: "../../config/scripts/cleanup-nncp.sh"
+  # Create a dummy configmap just to have an object (will be cleaned up)
+  objects:
+  - objectTemplate: ../../config/templates/dummy-configmap.yml
+    replicas: 1
+    inputVars:
+      name: nncp-cleanup-trigger
+      namespace: {{ $nsName }}
+{{ end }}

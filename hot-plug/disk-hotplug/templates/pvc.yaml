@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .pvcPrefix }}-{{ .Replica }}
+  namespace: {{ .NAMESPACE }}
+spec:
+  accessModes: ["ReadWriteOnce"]
+  storageClassName: {{ .storageClass }}
+  resources:
+    requests:
+      storage: {{ .pvcSize }}
+  volumeMode: {{ .volumeMode | default "Filesystem" }}

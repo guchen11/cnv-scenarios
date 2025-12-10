@@ -1,0 +1,139 @@
+{{- $PROM := .PROM -}}
+{{- $PROM_TOKEN := .PROM_TOKEN -}}
+{{- $kubeBurnerFQDN := "kube-burner.io" -}}
+{{- $testName := "disk-hotplug-test" }}
+{{- $nsName := .testNamespace | default "disk-hotplug-test" -}}
+{{- $vmCount := .vmCount | default 1 -}}
+{{- $vmName := "disk-hotplug-vm" -}}
+{{- $sshPublicKeySecretName := $vmName -}}
+{{- $diskCount := .diskCount | default 256 -}}
+{{- $jobCounterLabelKey := (list $testName "." $kubeBurnerFQDN "/counter") | join "" -}}
+{{- $jobCounterLabelValue := (list "counter-" (.counter | toString )) | join "" -}}
+{{- $testNamespacesLabelKey := (list $kubeBurnerFQDN "/test-name") | join "" -}}
+{{- $testNamespacesLabelValue := $testName -}}
+{{- $metricsBaseDirectory := $testName -}}
+---
+global:
+  measurements:
+  - name: vmiLatency
+  - name: pvcLatency
+
+metricsEndpoints:
+- indexer:
+    type: local
+    metricsDirectory: "{{ .resultsPath }}/{{ .runTimestamp }}/iteration-{{ .counter | toString }}"
+{{- if .esServer }}
+- endpoint: {{ .PROM }}
+  token: {{ .PROM_TOKEN }}
+  metrics: [../../config/metrics-profiles/kubevirt-metrics.yaml]
+  indexer:
+    type: elastic
+    defaultIndex: {{ .testName }}
+    esServers: [{{ .esServer }}]
+    insecureSkipVerify: true
+{{- end }}
+
+jobs:
+# Run cleanup only when counter is 0
+{{ if eq (.counter | int) 0 }}
+- name: start-fresh
+  jobType: delete
+  waitForDeletion: true
+  qps: 5
+  burst: 10
+  objects:
+  - kind: Namespace
+    labelSelector:
+      {{ $testNamespacesLabelKey }}: {{ $testNamespacesLabelValue }}
+{{ end }}
+
+# Create VMs and PVCs for disk hotplug testing
+- name: create-vm-and-pvcs
+  jobType: create
+  jobIterations: 1
+  qps: 5
+  burst: 10
+  namespacedIterations: false
+  namespace: {{ $nsName }}
+  namespaceLabels:
+    {{ $testNamespacesLabelKey }}: {{ $testNamespacesLabelValue }}
+  # verify object count after running each job
+  verifyObjects: true
+  errorOnVerify: true
+  # interval between jobs execution
+  jobIterationDelay: 20s
+  # wait all VMI be in the Ready Condition
+  waitWhenFinished: true
+  podWait: true
+  maxWaitTimeout: {{ .maxWaitTimeout | default "30m" }}
+  jobPause: {{ .jobPause | default "2m" }}
+  cleanup: false
+  # Set missing key as empty to allow using default values
+  defaultMissingKeysWithZero: true
+  objects:
+  - objectTemplate: templates/secret_ssh_public.yml
+    runOnce: true
+    replicas: 1
+    inputVars:
+      name: {{ $sshPublicKeySecretName }}
+      counter: {{ .counter | toString }}
+      publicKey: {{ .publicKey }}
+  - objectTemplate: templates/cloudinit-secret.yaml
+    replicas: 1
+    runOnce: true
+    inputVars:
+      NAMESPACE: {{ $nsName }}
+      name: {{ $vmName }}
+      counter: {{ .counter | toString }}
+      DISK_COUNT: {{ $diskCount }}
+  - objectTemplate: templates/vm.yaml
+    replicas: {{ $vmCount }}
+    waitOptions:
+      labelSelector:
+        {{ $jobCounterLabelKey }}: {{ $jobCounterLabelValue }}
+    inputVars:
+      NAMESPACE: {{ $nsName }}
+      name: {{ $vmName }}
+      counter: {{ .counter | toString }}
+      OS: Fedora
+      VMIrunning: {{ .vmRunning | default true }}
+      baseImage: {{ .baseImage | default "quay.io/containerdisks/fedora:41" }}
+      memory: {{ .memory | default "4Gi" }}
+      cpuCores: {{ .cpuCores | default 2 }}
+      sshPublicKeySecret: {{ $sshPublicKeySecretName }}
+      url: {{ .imageUrl | default "https://dl.fedoraproject.org/pub/fedora/linux/releases/42/Cloud/x86_64/images/Fedora-Cloud-Base-Generic-42-1.1.x86_64.qcow2" }}
+      nodeSelector: {{ .nodeSelector | default "" }}
+      storage: {{ .storage | default "20Gi" }}
+      storageclass: {{ .storageClassName | default "ocs-storagecluster-ceph-rbd" }}
+      volumemode: {{ .volumeMode | default "Block" }}
+      DISK_COUNT: {{ $diskCount }}
+      vmLabels:
+        {{ $jobCounterLabelKey }}: {{ $jobCounterLabelValue }}
+  - objectTemplate: templates/pvc.yaml
+    replicas: {{ $diskCount }}
+    inputVars:
+      NAMESPACE: {{ $nsName }}
+      pvcPrefix: {{ .pvcPrefix | default "hotplug-disk" }}
+      pvcSize: {{ .pvcSize | default "10Gi" }}
+      storageClass: {{ .storageClassName | default "ocs-storagecluster-ceph-rbd" }}
+      volumeMode: {{ .volumeMode | default "Block" }}
+
+# Hotplug disks to the VM
+- name: hotplug-disks
+  jobType: kubevirt
+  jobIterations: 1
+  namespacedIterations: false
+  namespace: {{ $nsName }}
+  maxWaitTimeout: {{ .hotplugTimeout | default "15m" }}
+  beforeCleanup: "../../config/scripts/wrapper.sh check_disk_hotplug {{ $jobCounterLabelKey }} {{ $jobCounterLabelValue }} {{ $nsName }} {{ $diskCount }} {{ .pvcSize }} {{ .privateKey }} {{ .vmUser }} {{ .validatePvcBySize | default true }} {{ .validateHotplugFromOs | default true }} {{ .resultsPath }}/{{ .runTimestamp }}/iteration-{{ .counter }}"
+  objects:
+{{- $persist := .hotplugPersist | default true }}
+{{- $prefix := .pvcPrefix | default "hotplug-disk" }}
+{{- range $i, $_ := until (.diskCount | default 256 | int) }}
+  - kubeVirtOp: add-volume
+    labelSelector: 
+      {{ $jobCounterLabelKey }}: {{ $jobCounterLabelValue }}
+    inputVars:
+      volumeName: "{{ $prefix }}-{{ add $i 1 }}"
+      persist: {{ $persist }}
+{{- end }}

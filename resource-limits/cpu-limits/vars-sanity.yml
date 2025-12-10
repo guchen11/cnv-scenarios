@@ -1,0 +1,48 @@
+# CPU Limits Sanity Test Configuration
+# Minimal resources for quick validation testing
+
+# Test Configuration
+testNamespace: "sanity-cpu-limits-TIMESTAMP"  # TIMESTAMP replaced at runtime
+testName: 'sanity-cpu-limits'
+resultsPath: "/tmp/kube-burner-results/sanity-cpu-limits"
+runTimestamp: "run-default"  # Will be set by run-sanity-tests.sh
+
+# VM Configuration
+vmCount: 1
+
+# CPU Configuration (minimal)
+cpuCores: 1
+
+# Resource Configuration (minimal)
+memory: "512Mi"
+storage: "10Gi"
+
+# Storage Configuration
+storageClassName: "ocs-storagecluster-ceph-rbd"
+volumeMode: "Filesystem"
+
+# VM Image Configuration
+imageUrl: "https://dl.fedoraproject.org/pub/fedora/linux/releases/42/Cloud/x86_64/images/Fedora-Cloud-Base-Generic-42-1.1.x86_64.qcow2"
+baseImage: "quay.io/containerdisks/fedora:41"
+
+# SSH Configuration
+privateKey: '/home/kni/.ssh/id_rsa'
+publicKey: '/home/kni/.ssh/id_rsa.pub'
+vmUser: 'fedora'  # Fedora cloud images use 'fedora' user
+
+# Test Execution Control
+counter: 1
+vmRunning: true
+
+# Timeout Configuration (reduced for sanity)
+maxWaitTimeout: "5m"
+jobPause: "1m"
+
+# Monitoring Configuration (disabled for sanity)
+esServer: ""
+PROM: ""
+PROM_TOKEN: ""
+
+# Node Targeting Configuration (optional)
+nodeSelector: ""
+

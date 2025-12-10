@@ -1,0 +1,50 @@
+{
+ "apiVersion": "nmstate.io/v1",
+ "kind": "NodeNetworkConfigurationPolicy",
+ "metadata": {
+   "name": "br-nncp-scale-{{add .Replica 100}}",
+   "labels": {
+     "test-type": "nic-hotplug-vlan"
+   }
+ },
+ "spec": {
+   "desiredState": {
+     "interfaces": [
+       {
+         "name": "br-scale-{{add .Replica 100}}",
+         "type": "linux-bridge",
+         "state": "{{.state}}",
+         "bridge": {
+           "options": {
+             "stp": {
+               "enabled": false
+             }
+           },
+           "port": [
+             { "name": "{{.base_interface}}.{{add .Replica 100}}" }
+           ]
+         },
+         "ipv4": {
+           "enabled": false,
+           "dhcp": false
+         },
+         "ipv6": {
+           "enabled": false
+         }
+       },
+       {
+         "name": "{{.base_interface}}.{{add .Replica 100}}",
+         "type": "vlan",
+         "state": "{{.state}}",
+         "vlan": {
+           "base-iface": "{{.base_interface}}",
+           "id": "{{add .Replica 100}}"
+         }
+       }
+     ]
+   },
+   "nodeSelector": {
+      "node-role.kubernetes.io/worker": ""
+   }
+ }
+}

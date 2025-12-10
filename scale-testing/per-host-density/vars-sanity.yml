@@ -1,0 +1,71 @@
+# Per-Host Density Sanity Test Configuration
+# Minimal VM count for quick validation
+
+# Test Configuration
+testNamespace: "sanity-per-host-density-TIMESTAMP"  # TIMESTAMP replaced at runtime
+testName: 'sanity-per-host-density'
+resultsPath: "/tmp/kube-burner-results/sanity-per-host-density"
+runTimestamp: "run-default"  # Will be set by run-sanity-tests.sh
+
+# Scale Mode Configuration
+scaleMode: "single-node"                # Keep simple for sanity tests
+namespaceCount: 1                       # Single namespace for sanity
+testNamespacePrefix: "sanity-per-host-density"
+
+# VM Scaling Configuration (minimal)
+vmsPerNamespace: 2                      # Minimal VMs for sanity
+vmsPerHost: 2                           # Backward compatibility
+vmUser: alpine
+
+# Validation Configuration
+percentage_of_vms_to_validate: 100      # Validate all VMs in sanity tests
+max_ssh_retries: 8                      # ~2 minutes max wait
+
+# Storage Configuration (minimal)
+sourceStorageSize: 5120
+vmStorageSize: 5120
+storageClassName: ocs-storagecluster-ceph-rbd
+
+# VM Resource Allocation (minimal)
+vmCpuCores: 100
+vmMemory: 256Mi
+vmCpuRequest: "100m"
+vmCpuLimit: "1000m"
+
+# Test Execution Control
+counter: 1
+max-iterations: 1
+cleanup: true
+
+# SSH Configuration for VM Access
+privateKey: '/home/kni/.ssh/id_rsa'
+publicKey: '/home/kni/.ssh/id_rsa.pub'
+
+# Node Targeting Configuration
+targetNode: ""                          # Empty = scheduler decides
+nodeSelectorLabel: "kubernetes.io/hostname"
+workerNodeSelector: "node-role.kubernetes.io/worker="
+
+# VM Lifecycle Configuration
+shutdownBatchSize: 10
+sleepBetweenPhases: 30s
+
+# Rate Limiting (reduced for sanity)
+qpsCreate: 10
+burstCreate: 20
+qpsShutdown: 10
+burstShutdown: 20
+qpsStartup: 10
+burstStartup: 20
+
+# Timeout Configuration (reduced for sanity)
+maxWaitTimeout: "5m"
+jobPause: "30s"
+
+# Monitoring Configuration (disabled for sanity)
+esServer: ""
+PROM: ""
+PROM_TOKEN: ""
+
+# VM Image Configuration
+imageUrl: "https://dl-cdn.alpinelinux.org/alpine/v3.22/releases/cloud/generic_alpine-3.22.0-x86_64-bios-cloudinit-r0.qcow2"

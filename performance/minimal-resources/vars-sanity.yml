@@ -1,0 +1,44 @@
+# Minimal Resources Sanity Test Configuration
+# Tests with absolute minimum resources
+
+# Test Configuration
+testNamespace: "sanity-minimal-resources-TIMESTAMP"  # TIMESTAMP replaced at runtime
+testName: 'sanity-minimal-resources'
+resultsPath: "/tmp/kube-burner-results/sanity-minimal-resources"
+runTimestamp: "run-default"  # Will be set by run-sanity-tests.sh
+
+# VM Configuration
+vmCount: 1
+vmName: "minimal-resources-vm"
+
+# Minimal Resource Configuration
+minCpu: "100m"
+minMemory: "128Mi"
+minStorage: "1Gi"
+
+# Storage Configuration
+storageClassName: "ocs-storagecluster-ceph-rbd"
+
+# VM Image Configuration
+osType: "cirros"
+
+# Test Execution Control
+counter: 1
+vmRunning: true
+
+# Timeout Configuration (reduced for sanity)
+maxWaitTimeout: "5m"
+jobPause: "1m"
+
+# Node Targeting Configuration (optional)
+nodeSelector: ""
+
+# SSH Configuration for VM Access (CirrOS password auth)
+vmUser: 'cirros'
+vmPassword: 'gocubsgo'  # CirrOS default password
+
+# Monitoring Configuration (disabled for sanity)
+esServer: ""
+PROM: ""
+PROM_TOKEN: ""
+

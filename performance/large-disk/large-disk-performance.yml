@@ -1,0 +1,103 @@
+{{- $PROM := .PROM -}}
+{{- $PROM_TOKEN := .PROM_TOKEN -}}
+{{- $kubeBurnerFQDN := "kube-burner.io" -}}
+{{- $testName := .testName | default "large-disk-performance" }}
+{{- $nsName := .testNamespace | default "large-disk-performance" -}}
+{{- $vmCount := .vmCount | default 1 -}}
+{{- $vmName := .vmName | default "large-disk-vm" -}}
+{{- $sshPublicKeySecretName := $vmName -}}
+{{- $cloudInitSecretName := $vmName -}}
+{{- $jobCounterLabelKey := (list $testName "." $kubeBurnerFQDN "/counter") | join "" -}}
+{{- $jobCounterLabelValue := (list "counter-" (.counter | toString )) | join "" -}}
+{{- $testNamespacesLabelKey := (list $kubeBurnerFQDN "/test-name") | join "" -}}
+{{- $testNamespacesLabelValue := $testName -}}
+---
+global:
+  measurements:
+  - name: vmiLatency
+  - name: pvcLatency
+
+metricsEndpoints:
+- indexer:
+    type: local
+    metricsDirectory: "{{ .resultsPath }}/{{ .runTimestamp }}/iteration-{{ .counter | toString }}"
+{{- if .esServer }}
+- endpoint: {{ .PROM }}
+  token: {{ .PROM_TOKEN }}
+  metrics: [../../config/metrics-profiles/kubevirt-metrics.yaml]
+  indexer:
+    type: elastic
+    defaultIndex: {{ .testName }}
+    esServers: [{{ .esServer }}]
+    insecureSkipVerify: true
+{{- end }}
+
+jobs:
+# Run cleanup only when counter is 0
+{{ if eq (.counter | int) 0 }}
+- name: start-fresh
+  jobType: delete
+  waitForDeletion: true
+  qps: 5
+  burst: 10
+  objects:
+  - kind: Namespace
+    labelSelector:
+      {{ $testNamespacesLabelKey }}: {{ $testNamespacesLabelValue }}
+{{ end }}
+
+- name: large-disk-performance
+  jobType: create
+  jobIterations: 1
+  qps: 2
+  burst: 5
+  namespacedIterations: false
+  namespace: {{ $nsName }}
+  namespaceLabels:
+    {{ $testNamespacesLabelKey }}: {{ $testNamespacesLabelValue }}
+  verifyObjects: true
+  errorOnVerify: true
+  maxWaitTimeout: {{ .maxWaitTimeout | default "120m" }}
+  jobPause: {{ .jobPause | default "15m" }}
+  cleanup: false
+  defaultMissingKeysWithZero: true
+  beforeCleanup: "../../config/scripts/wrapper.sh check_large_disk {{ $jobCounterLabelKey }} {{ $jobCounterLabelValue }} {{ $nsName }} {{ .largeDiskSize | default "100Ti" }} {{ .privateKey }} {{ .vmUser }} {{ .resultsPath }}/{{ .runTimestamp }}/iteration-{{ .counter }}"
+  objects:
+  - objectTemplate: templates/secret_ssh_public.yml
+    runOnce: true
+    replicas: 1
+    inputVars:
+      name: {{ $sshPublicKeySecretName }}
+      counter: {{ .counter | toString }}
+      publicKey: {{ .publicKey }}
+  - objectTemplate: templates/cloudinit-userdata-secret.yml
+    runOnce: true
+    replicas: 1
+    inputVars:
+      name: {{ $cloudInitSecretName }}
+      counter: {{ .counter | toString }}
+      vmUser: {{ .vmUser | default "cloud-user" }}
+      enablePerfTest: {{ .enablePerfTest | default false }}
+  - objectTemplate: vm-large-disk.yml
+    replicas: {{ $vmCount }}
+    waitOptions:
+      labelSelector:
+        {{ $jobCounterLabelKey }}: {{ $jobCounterLabelValue }}
+    inputVars:
+      name: {{ $vmName }}
+      counter: {{ .counter | toString }}
+      OS: {{ .osType | default "rhel9" }}
+      cpuCores: {{ .cpuCores | default 16 }}
+      memory: {{ .memory | default "32Gi" }}
+      rootStorage: {{ .rootStorage | default "50Gi" }}
+      # Large disk size - default 100Ti as per CSV scenario
+      dataStorage: {{ .largeDiskSize | default "100Ti" }}
+      storageclass: {{ .storageClassName | default "ocs-storagecluster-ceph-rbd" }}
+      volumemode: Block
+      VMIrunning: {{ .vmRunning | default true }}
+      nodeSelector: {{ .nodeSelector | default "" }}
+      sshPublicKeySecret: {{ $sshPublicKeySecretName }}
+      cloudInitSecret: {{ $cloudInitSecretName }}
+      baseImage: {{ .baseImage | default "quay.io/containerdisks/fedora:41" }}
+      vmLabels:
+        {{ $jobCounterLabelKey }}: {{ $jobCounterLabelValue }}

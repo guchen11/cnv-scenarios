@@ -1,0 +1,79 @@
+apiVersion: kubevirt.io/v1
+kind: VirtualMachine
+metadata:
+  labels:
+    kubevirt-vm: 'vm-{{.name}}-{{.Replica}}'
+    test-type: disk-hotplug
+{{- range $key, $value := .vmLabels }}
+    {{ $key }}: {{ $value }}
+{{- end }}
+  name: '{{.name}}-{{.Replica}}'
+spec:
+  running: {{.VMIrunning}}
+  template:
+    metadata:
+      labels:
+        kubevirt-vm: "vm-{{.name}}-{{.Replica}}"
+        kubevirt.io/os: {{.OS}}
+        test-type: disk-hotplug
+{{- range $key, $value := .vmLabels }}
+        {{ $key }}: {{ $value }}
+{{- end }}
+    spec:
+      accessCredentials:
+      - sshPublicKey:
+          propagationMethod:
+            noCloud: {}
+          source:
+            secret:
+              secretName: "{{ .sshPublicKeySecret }}-{{ .counter }}"
+      {{- if .nodeSelector }}
+      nodeSelector:
+        {{ .nodeSelector }}
+      {{- end }}
+      domain:
+        cpu:
+          cores: {{.cpuCores}}
+        devices:
+          disks:
+          - disk:
+              bus: scsi
+            name: rootdisk
+          - disk:
+              bus: virtio
+            name: cloudinitdisk
+          interfaces:
+          - masquerade: {}
+            model: virtio
+            name: default
+          networkInterfaceMultiqueue: true
+          rng: {}
+        resources:
+          requests:
+            memory: {{.memory}}
+      networks:
+      - name: default
+        pod: {}
+      volumes:
+      - dataVolume:
+          name: dvclone-{{.Replica}}
+        name: rootdisk
+      - cloudInitNoCloud:
+          secretRef:
+            name: {{.name}}-cloudinit-{{.Replica}}
+        name: cloudinitdisk
+  dataVolumeTemplates:
+  - metadata:
+      name: dvclone-{{.Replica}}
+    spec:
+      source:
+            http:
+                url: {{.url}}
+      storage:
+        accessModes:
+        - ReadWriteMany
+        resources:
+          requests:
+            storage: {{.storage}}
+        storageClassName: {{.storageclass}}
+        volumeMode: {{.volumemode}}

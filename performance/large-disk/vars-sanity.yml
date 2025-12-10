@@ -1,0 +1,50 @@
+# Large Disk Performance Sanity Test Configuration
+# Minimal large disk size for validation
+
+# Test Configuration
+testNamespace: "sanity-large-disk-TIMESTAMP"  # TIMESTAMP replaced at runtime
+testName: 'sanity-large-disk'
+resultsPath: "/tmp/kube-burner-results/sanity-large-disk"
+runTimestamp: "run-default"  # Will be set by run-sanity-tests.sh
+
+# VM Configuration
+vmCount: 1
+vmName: "large-disk-vm"
+
+# CPU and Memory Configuration (minimal)
+cpuCores: 1
+memory: "512Mi"
+
+# Storage Configuration (minimal large disk)
+rootStorage: "10Gi"
+largeDiskSize: "10Gi"
+storageClassName: "ocs-storagecluster-ceph-rbd"
+volumeMode: "Filesystem"
+
+# VM Image Configuration
+baseImage: "quay.io/containerdisks/fedora:41"
+osType: "fedora"
+
+# SSH Configuration
+privateKey: '/home/kni/.ssh/id_rsa'
+publicKey: '/home/kni/.ssh/id_rsa.pub'
+vmUser: 'fedora'  # Fedora cloud images use 'fedora' user
+
+# Performance Test Configuration (disabled for sanity)
+enablePerfTest: false
+
+# Test Execution Control
+counter: 1
+vmRunning: true
+
+# Timeout Configuration (reduced for sanity)
+maxWaitTimeout: "5m"
+jobPause: "1m"
+
+# Node Targeting Configuration (optional)
+nodeSelector: ""
+
+# Monitoring Configuration (disabled for sanity)
+esServer: ""
+PROM: ""
+PROM_TOKEN: ""

@@ -1,0 +1,153 @@
+apiVersion: kubevirt.io/v1
+kind: VirtualMachine
+metadata:
+  labels:
+    kubevirt-vm: vm-{{.name}}-{{.Replica}}
+    test-type: disk-limits
+    {{- range $key, $value := .vmLabels }}
+    {{ $key }}: {{ $value }}
+    {{- end }}
+  name: {{.name}}-{{.Replica}}
+spec:
+  running: {{.VMIrunning}}
+  template:
+    metadata:
+      labels:
+        kubevirt-vm: vm-{{.name}}-{{.Replica}}
+        kubevirt.io/os: {{.OS}}
+        test-type: disk-limits
+        {{- range $key, $value := .vmLabels }}
+        {{ $key }}: {{ $value }}
+        {{- end }}
+    spec:
+      accessCredentials:
+      - sshPublicKey:
+          propagationMethod:
+            noCloud: {}
+          source:
+            secret:
+              secretName: "{{ .sshPublicKeySecret }}-{{ .counter }}"
+      {{- if .nodeSelector }}
+      nodeSelector:
+        {{ .nodeSelector }}
+      {{- end }}
+      domain:
+        cpu:
+          cores: {{.cpuCores}}
+        devices:
+          disks:
+          - disk:
+              bus: virtio
+            name: rootdisk
+          {{- range $i := until (.diskCount | int) }}
+          - disk:
+              bus: virtio
+            name: datadisk-{{ add $i 1 }}
+          {{- end }}
+          - disk:
+              bus: virtio
+            name: cloudinitdisk
+          interfaces:
+          - masquerade: {}
+            model: virtio
+            name: default
+          networkInterfaceMultiqueue: true
+          rng: {}
+        resources:
+          requests:
+            memory: {{.memory}}
+      networks:
+      - name: default
+        pod: {}
+      volumes:
+      - dataVolume:
+          name: dvclone-{{.Replica}}
+        name: rootdisk
+      {{- range $i := until (.diskCount | int) }}
+      - dataVolume:
+          name: datadisk-{{ add $i 1 }}-{{$.Replica}}
+        name: datadisk-{{ add $i 1 }}
+      {{- end }}
+      - cloudInitNoCloud:
+          userData: |-
+            #cloud-config
+            user: fedora
+            password: fedora
+            chpasswd: { expire: False }
+            users:
+              - name: fedora
+                groups: sudo
+                shell: /bin/bash
+                sudo: ["ALL=(ALL) NOPASSWD:ALL"]
+                lock_passwd: false
+                passwd: "$6$rounds=4096$Dse4F4jd$ZXYQ54DR.bIbU2J3ptBDEfU23gn7KSkv/tI2kDqR8RJJUY9QmNLq/2PZGEpxR3vAY3oUOZsG08QUlMFZPqClz/"
+
+            chpasswd:
+              expire: false
+
+            runcmd:
+              - dnf install -y fio hdparm smartmontools
+              - |
+                DISK_INDEX=1
+                for dev in /dev/vd[b-z]; do
+                  if [ ! -b "$dev" ]; then continue; fi
+                  mount | grep -q "$dev" && continue
+                  if ! lsblk -no NAME "${dev}1" | grep -q .; then
+                    echo -e "label: gpt\n,," | sfdisk "$dev"
+                    partprobe "$dev"
+                    sleep 2
+                  fi
+                  part="${dev}1"
+                  if [ ! -b "$part" ]; then
+                    echo "Partition $part not found, skipping"
+                    continue
+                  fi
+                  fs_type=$(blkid -s TYPE -o value "$part" || true)
+                  if [ -z "$fs_type" ]; then
+                    mkfs.xfs -f "$part"
+                  fi
+                  mount_point="/mnt/disk${DISK_INDEX}"
+                  mkdir -p "$mount_point"
+                  uuid=$(blkid -s UUID -o value "$part")
+                  if ! grep -q "$uuid" /etc/fstab; then
+                    echo "UUID=$uuid $mount_point xfs defaults 0 0" >> /etc/fstab
+                  fi
+                  mount "$mount_point"
+                  DISK_INDEX=$((DISK_INDEX + 1))
+                done
+              - dd if=/dev/zero of=/mnt/disk1/testfile bs=1G count=10 &
+        name: cloudinitdisk
+  dataVolumeTemplates:
+  - metadata:
+      name: dvclone-{{.Replica}}
+    spec:
+      source:
+            http:
+                url: {{.url}}
+      storage:
+        accessModes:
+        - ReadWriteMany
+        resources:
+          requests:
+            storage: 20Gi
+        storageClassName: {{.storageclass}}
+        volumeMode: Block
+  {{- range $i := until (.diskCount | int) }}
+  - metadata:
+      name: datadisk-{{ add $i 1 }}-{{$.Replica}}
+    spec:
+      source:
+        blank: {}
+      storage:
+        accessModes:
+        {{- if eq $.volumemode "Filesystem" }}
+        - ReadWriteOnce
+        {{- else }}
+        - ReadWriteMany
+        {{- end }}
+        resources:
+          requests:
+            storage: {{$.storage}}
+        storageClassName: {{$.storageclass}}
+        volumeMode: {{$.volumemode}}
+  {{- end }}

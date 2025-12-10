@@ -1,0 +1,138 @@
+apiVersion: kubevirt.io/v1
+kind: VirtualMachine
+metadata:
+  labels:
+    kubevirt-vm: vm-{{.name}}-{{.counter}}-{{.Replica}}
+    test-type: per-host-density
+    scale-mode: "{{ .scaleMode }}"
+    {{- if .targetNode }}
+    target-node: "{{ .targetNode }}"
+    {{- end }}
+  {{range $key, $value := .vmLabels }}
+    {{ $key }}: {{ $value }}
+  {{end}}
+  name: "{{.name}}-{{.counter}}-{{.Replica}}"
+spec:
+  running: {{.VMIrunning}}
+  template:
+    metadata:
+      labels:
+        kubevirt-vm: vm-{{.name}}-{{.counter}}-{{.Replica}}
+        kubevirt.io/os: alpine
+        test-type: per-host-density
+        scale-mode: "{{ .scaleMode }}"
+        {{- if .targetNode }}
+        target-node: "{{ .targetNode }}"
+        {{- end }}
+      {{range $key, $value := .vmLabels }}
+        {{ $key }}: {{ $value }}
+      {{end}}
+    spec:
+      {{- if eq .scaleMode "single-node" }}
+      {{- if .targetNode }}
+      nodeSelector:
+        {{ .nodeSelectorLabel }}: {{ .targetNode }}
+      {{- end }}
+      # Single-node mode: Force all VMs to same node using podAffinity
+      affinity:
+        podAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: test-type
+                operator: In
+                values:
+                - per-host-density
+            topologyKey: kubernetes.io/hostname
+      {{- else }}
+      # Multi-node mode: Distribute VMs across nodes using podAntiAffinity
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: test-type
+                  operator: In
+                  values:
+                  - per-host-density
+              topologyKey: kubernetes.io/hostname
+      {{- end }}
+      domain:
+        cpu:
+          cores: 1
+        devices:
+          disks:
+          - disk:
+              bus: virtio
+            name: rootdisk
+          - disk:
+              bus: virtio
+            name: cloudinitdisk
+          interfaces:
+          - masquerade: {}
+            model: virtio
+            name: default
+          networkInterfaceMultiqueue: false
+          rng: {}
+        resources:
+          requests:
+            memory: {{.memory}}
+            cpu: {{.cpuRequest}}
+          limits:
+            memory: {{.memory}}
+            cpu: {{.cpuLimit}}
+      accessCredentials:
+      - sshPublicKey:
+          propagationMethod:
+            qemuGuestAgent:
+              users:
+                - alpine
+          source:
+            secret:
+              secretName: "{{ .sshPublicKeySecret }}"
+      networks:
+      - name: default
+        pod: {}
+      volumes:
+      - dataVolume:
+          name: dvclone-{{.counter}}-{{.Replica}}
+        name: rootdisk
+      - cloudInitNoCloud:
+          userData: |-
+            #cloud-config
+            users:
+              - name: alpine
+                shell: /bin/ash
+                sudo: ALL=(ALL) NOPASSWD:ALL
+                lock_passwd: false
+                plain_text_passwd: alpine
+            ssh_pwauth: true
+            chpasswd:
+                expire: false
+            package_update: true
+            packages:
+              - qemu-guest-agent
+
+            # Enable and start the service
+            runcmd:
+              - apk add qemu-guest-agent
+              - rc-update add qemu-guest-agent default
+              - service qemu-guest-agent start
+        name: cloudinitdisk
+  dataVolumeTemplates:
+  - metadata:
+      name: dvclone-{{.counter}}-{{.Replica}}
+    spec:
+      source:
+        pvc:
+          name: per-host-source
+      storage:
+        accessModes:
+        - ReadWriteMany
+        resources:
+          requests:
+            storage: {{.storage}}
+        storageClassName: {{.storageclass}}
+        volumeMode: {{.volumemode}}

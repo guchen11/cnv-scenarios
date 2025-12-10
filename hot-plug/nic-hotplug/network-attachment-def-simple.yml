@@ -1,0 +1,24 @@
+apiVersion: k8s.cni.cncf.io/v1
+kind: NetworkAttachmentDefinition
+metadata:
+  labels:
+    test-type: nic-hotplug-simple
+  name: {{.name}}-simple-{{.Replica}}
+spec:
+  config: |
+    {
+      "cniVersion": "0.3.1",
+      "name": "{{.name}}-simple-{{.Replica}}",
+      "type": "bridge",
+      "bridge": "br-scale-{{.Replica}}",
+      "isGateway": false,
+      "ipMasq": false,
+      "ipam": {
+        "type": "static",
+        "addresses": [
+          {
+            "address": "192.168.{{.Replica}}.10/24"
+          }
+        ]
+      }
+    }

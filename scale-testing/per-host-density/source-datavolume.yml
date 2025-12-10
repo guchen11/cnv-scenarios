@@ -1,0 +1,18 @@
+apiVersion: cdi.kubevirt.io/v1beta1
+kind: DataVolume
+metadata:
+  labels:
+    test-type: per-host-density
+  name: {{.name}}
+spec:
+  source:
+    http:
+        url: {{.imageUrl}}
+  storage:
+    accessModes:
+    - ReadWriteMany
+    resources:
+      requests:
+        storage: {{.storage}}
+    storageClassName: {{.storageclass}}
+    volumeMode: {{.volumemode}}

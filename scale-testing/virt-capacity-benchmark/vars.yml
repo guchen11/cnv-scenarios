@@ -1,0 +1,41 @@
+# Virt-Capacity-Benchmark Test Configuration
+testNamespace: "kube-burner-capacity-custom"
+testName: 'virt-capacity-benchmark'
+resultsPath: "/tmp/kube-burner-results/virt-capacity-benchmark"
+runTimestamp: "run-default"
+
+# VM Configuration
+vmCount: 5
+vmUser: fedora
+rootVolumeSize: 20
+dataVolumeSize: 10
+volumeSizeIncrement: 5
+
+# Test Execution
+counter: 1
+max-iterations: 2
+data-volume-count: 2 
+dataVolumeCounters: [1, 2]
+
+# Validation Configuration
+percentage_of_vms_to_validate: 25
+max_ssh_retries: 8
+
+# SSH Configuration
+privateKey: '/home/kni/.ssh/id_rsa'
+publicKey: '/home/kni/.ssh/id_rsa.pub'
+
+# Storage Configuration
+storageClassName: ocs-storagecluster-ceph-rbd
+
+# Job Control
+skip-migration-job: true
+skip-resize-job: true
+skipMigrationJob: true
+skipResizeJob: true
+cleanup: true
+
+# Monitoring Configuration
+esServer: http://f01-h08-000-1029u.rdu2.scalelab.redhat.com:9200
+PROM: '' 
+PROM_TOKEN: '' 

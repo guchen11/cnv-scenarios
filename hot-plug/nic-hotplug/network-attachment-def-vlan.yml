@@ -1,0 +1,24 @@
+apiVersion: k8s.cni.cncf.io/v1
+kind: NetworkAttachmentDefinition
+metadata:
+  labels:
+    test-type: nic-hotplug-vlan
+  name: {{.name}}-vlan-{{.Replica}}
+spec:
+  config: |
+    {
+      "cniVersion": "0.3.1",
+      "name": "{{.name}}-vlan-{{.Replica}}",
+      "type": "bridge",
+      "bridge": "br-scale-{{add .Replica 100}}",
+      "isGateway": false,
+      "ipMasq": false,
+      "ipam": {
+        "type": "static",
+        "addresses": [
+          {
+            "address": "192.168.{{add .Replica 100}}.10/24"
+          }
+        ]
+      }
+    }

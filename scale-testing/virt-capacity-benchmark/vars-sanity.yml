@@ -1,0 +1,42 @@
+# Virt-Capacity-Benchmark Sanity Test Configuration
+# Reduced VM count for quick validation testing
+testNamespace: "sanity-capacity-TIMESTAMP"
+testName: 'virt-capacity-benchmark'
+resultsPath: "/tmp/kube-burner-results/virt-capacity-benchmark"
+runTimestamp: "run-default"
+
+# VM Configuration (reduced for sanity)
+vmCount: 2
+vmUser: fedora
+rootVolumeSize: 10
+dataVolumeSize: 5
+volumeSizeIncrement: 2
+
+# Test Execution
+counter: 1
+max-iterations: 1
+data-volume-count: 1
+dataVolumeCounters: [1]
+
+# Validation Configuration
+percentage_of_vms_to_validate: 100
+max_ssh_retries: 8
+
+# SSH Configuration
+privateKey: '/home/kni/.ssh/id_rsa'
+publicKey: '/home/kni/.ssh/id_rsa.pub'
+
+# Storage Configuration
+storageClassName: ocs-storagecluster-ceph-rbd
+
+# Job Control (skip optional jobs for sanity)
+skip-migration-job: true
+skip-resize-job: true
+skipMigrationJob: true
+skipResizeJob: true
+cleanup: true
+
+# Monitoring Configuration
+esServer: ''
+PROM: '' 
+PROM_TOKEN: ''

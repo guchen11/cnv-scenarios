@@ -1,0 +1,83 @@
+{{- $PROM := .PROM -}}
+{{- $PROM_TOKEN := .PROM_TOKEN -}}
+{{- $kubeBurnerFQDN := "kube-burner.io" -}}
+{{- $testName := .testName | default "minimal-resources-test" }}
+{{- $nsName := .testNamespace | default "minimal-resources-test" -}}
+{{- $vmCount := .vmCount | default 1 -}}
+{{- $vmName := .vmName | default "minimal-resources-vm" -}}
+{{- $jobCounterLabelKey := (list $testName "." $kubeBurnerFQDN "/counter") | join "" -}}
+{{- $jobCounterLabelValue := (list "counter-" (.counter | toString )) | join "" -}}
+{{- $testNamespacesLabelKey := (list $kubeBurnerFQDN "/test-name") | join "" -}}
+{{- $testNamespacesLabelValue := $testName -}}
+---
+global:
+  measurements:
+  - name: vmiLatency
+  - name: pvcLatency
+
+metricsEndpoints:
+- indexer:
+    type: local
+    metricsDirectory: "{{ .resultsPath }}/{{ .runTimestamp }}/iteration-{{ .counter | toString }}"
+{{- if .esServer }}
+- endpoint: {{ .PROM }}
+  token: {{ .PROM_TOKEN }}
+  metrics: [../../config/metrics-profiles/kubevirt-metrics.yaml]
+  indexer:
+    type: elastic
+    defaultIndex: {{ .testName }}
+    esServers: [{{ .esServer }}]
+    insecureSkipVerify: true
+{{- end }}
+
+jobs:
+# Run cleanup only when counter is 0
+{{ if eq (.counter | int) 0 }}
+- name: start-fresh
+  jobType: delete
+  waitForDeletion: true
+  qps: 5
+  burst: 10
+  objects:
+  - kind: Namespace
+    labelSelector:
+      {{ $testNamespacesLabelKey }}: {{ $testNamespacesLabelValue }}
+{{ end }}
+
+- name: minimal-resources-test
+  jobType: create
+  jobIterations: 1
+  qps: 10
+  burst: 20
+  namespacedIterations: false
+  namespace: {{ $nsName }}
+  namespaceLabels:
+    {{ $testNamespacesLabelKey }}: {{ $testNamespacesLabelValue }}
+  verifyObjects: true
+  errorOnVerify: true
+  maxWaitTimeout: {{ .maxWaitTimeout | default "30m" }}
+  jobPause: {{ .jobPause | default "2m" }}
+  cleanup: false
+  defaultMissingKeysWithZero: true
+  beforeCleanup: "../../config/scripts/wrapper.sh check_performance_metrics {{ $jobCounterLabelKey }} {{ $jobCounterLabelValue }} {{ $nsName }} {{ .vmPassword }} {{ .vmUser }} {{ .resultsPath }}/{{ .runTimestamp }}/iteration-{{ .counter }}"
+  objects:
+  - objectTemplate: vm-minimal-resources.yml
+    replicas: {{ $vmCount }}
+    waitOptions:
+      labelSelector:
+        {{ $jobCounterLabelKey }}: {{ $jobCounterLabelValue }}
+    inputVars:
+      name: {{ $vmName }}
+      counter: {{ .counter | toString }}
+      OS: {{ .osType | default "cirros" }}
+      # Minimal resources - CirrOS needs ~256Mi memory minimum
+      cpuRequest: {{ .minCpu | default "100m" }}
+      cpuLimit: {{ .minCpu | default "100m" }}
+      memory: {{ .minMemory | default "256Mi" }}
+      storage: {{ .minStorage | default "1Gi" }}
+      storageclass: {{ .storageClassName | default "ocs-storagecluster-ceph-rbd" }}
+      volumemode: Block
+      VMIrunning: {{ .vmRunning | default true }}
+      nodeSelector: {{ .nodeSelector | default "" }}
+      vmLabels:
+        {{ $jobCounterLabelKey }}: {{ $jobCounterLabelValue }}

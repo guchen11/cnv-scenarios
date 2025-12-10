@@ -1,0 +1,57 @@
+# Disk Hot-plug Sanity Test Configuration
+# Minimal resources for quick validation testing
+
+# Test Configuration
+testNamespace: "sanity-disk-hotplug-TIMESTAMP"  # TIMESTAMP replaced at runtime
+testName: 'sanity-disk-hotplug'
+resultsPath: "/tmp/kube-burner-results/sanity-disk-hotplug"
+runTimestamp: "run-default"  # Will be set by run-sanity-tests.sh
+
+# VM Configuration
+vmCount: 1
+vmRunning: true
+
+# Disk Hot-plug Configuration (minimal)
+diskCount: 3
+pvcPrefix: "hotplug-disk"
+pvcSize: "1Gi"
+hotplugPersist: true
+
+# CPU and Memory Configuration (minimal)
+cpuCores: 1
+memory: "512Mi"
+
+# Storage Configuration
+storage: "10Gi"
+storageClassName: "ocs-storagecluster-ceph-rbd"
+volumeMode: "Block"
+
+# VM Image Configuration
+imageUrl: "https://dl.fedoraproject.org/pub/fedora/linux/releases/42/Cloud/x86_64/images/Fedora-Cloud-Base-Generic-42-1.1.x86_64.qcow2"
+baseImage: "quay.io/containerdisks/fedora:41"
+
+# SSH Configuration for VM Access
+privateKey: '/home/kni/.ssh/id_rsa'
+publicKey: '/home/kni/.ssh/id_rsa.pub'
+vmUser: 'cloud-user'
+
+# Validation Configuration
+validatePvcBySize: true
+validateHotplugFromOs: true
+
+# Test Execution Control
+counter: 1
+
+# Timeout Configuration (reduced for sanity)
+maxWaitTimeout: "5m"
+jobPause: "1m"
+hotplugTimeout: "5m"
+
+# Node Targeting Configuration (optional)
+nodeSelector: ""
+
+# Monitoring Configuration (disabled for sanity)
+esServer: ""
+PROM: ""
+PROM_TOKEN: ""
+

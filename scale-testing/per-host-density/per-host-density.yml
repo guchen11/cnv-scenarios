@@ -1,0 +1,198 @@
+{{- $PROM := .PROM -}}
+{{- $PROM_TOKEN := .PROM_TOKEN -}}
+{{- $kubeBurnerFQDN := "kube-burner.io" -}}
+{{- $testName := "per-host-density" }}
+{{- $vmName := $testName -}}
+{{- $sshPublicKeySecretName := $testName -}}
+{{- $sourceStorageSizeStr := (list (.sourceStorageSize | toString) "Mi") | join "" -}}
+{{- $vmStorageSizeStr := (list (.vmStorageSize | toString) "Mi") | join "" -}}
+{{- $jobCounterLabelKey := (list $testName "." $kubeBurnerFQDN "/counter") | join "" -}}
+{{- $jobCounterLabelValue := (list "counter-" (.counter | toString )) | join "" -}}
+{{- $testNamespacesLabelKey := (list $kubeBurnerFQDN "/test-name") | join "" -}}
+{{- $testNamespacesLabelValue := $testName -}}
+{{- $metricsBaseDirectory := $testName -}}
+{{- $targetNode := .targetNode -}}
+{{- $shutdownBatchSize := .shutdownBatchSize -}}
+{{- /* Scale mode and namespace configuration */ -}}
+{{- $scaleMode := .scaleMode | default "single-node" -}}
+{{- $namespaceCount := .namespaceCount | default 1 -}}
+{{- $vmsPerNamespace := .vmsPerNamespace | default 10 -}}
+{{- $namespacePrefix := .testNamespacePrefix | default "per-host-density-test" -}}
+{{- $nsName := $namespacePrefix -}}
+---
+global:
+  measurements:
+  - name: vmiLatency
+  - name: pvcLatency
+
+metricsEndpoints:
+- indexer:
+    type: local
+    metricsDirectory: "{{ .resultsPath }}/{{ .runTimestamp }}/iteration-{{ .counter | toString }}"
+{{- if .esServer }}
+- endpoint: {{ .PROM }}
+  token: {{ .PROM_TOKEN }}
+  metrics: [kubevirt-metrics.yaml]
+  indexer:
+    type: elastic
+    defaultIndex: {{ .testName }}
+    esServers: [{{ .esServer }}]
+    insecureSkipVerify: true
+{{- end }}
+jobs:
+# Run cleanup only when counter is 0
+{{ if eq (.counter | int) 0 }}
+- name: start-fresh
+  jobType: delete
+  waitForDeletion: true
+  maxWaitTimeout: {{ .maxWaitTimeout }}
+  qps: 5
+  burst: 10
+  objects:
+  - kind: Namespace
+    labelSelector:
+      {{ $testNamespacesLabelKey }}: {{ $testName }}
+{{ end }}
+
+# Create SSH secret for VM access validation (one per namespace)
+- name: create-ssh-secret
+  jobType: create
+  jobIterations: {{ $namespaceCount }}
+  qps: 5
+  burst: 10
+  namespacedIterations: true
+  namespace: {{ $namespacePrefix }}
+  namespaceLabels:
+    {{ $testNamespacesLabelKey }}: {{ $testNamespacesLabelValue }}
+  maxWaitTimeout: 5m
+  jobPause: 10s
+  cleanup: false
+  objects:
+  - objectTemplate: templates/ssh-secret.yml
+    replicas: 1
+    inputVars:
+      name: {{ .testName }}-ssh
+      publicKey: {{ .publicKey }}
+
+# Create source DataVolume first (one per namespace)
+- name: create-source-dv
+  jobType: create
+  jobIterations: {{ $namespaceCount }}
+  qps: 5
+  burst: 10
+  namespacedIterations: true
+  namespace: {{ $namespacePrefix }}
+  namespaceLabels:
+    {{ $testNamespacesLabelKey }}: {{ $testNamespacesLabelValue }}
+  maxWaitTimeout: {{ .maxWaitTimeout }}
+  jobPause: {{ .jobPause }}
+  cleanup: false
+  objects:
+  - objectTemplate: source-datavolume.yml
+    replicas: 1
+    inputVars:
+      name: per-host-source
+      storage: {{ $sourceStorageSizeStr }}
+      storageclass: {{ .storageClassName }}
+      volumemode: Block
+      imageUrl: {{ .imageUrl }}
+
+# Create VMs - supports single-node or multi-node distribution
+- name: create-vms
+  jobType: create
+  jobIterations: {{ $namespaceCount }}
+  qps: {{ .qpsCreate }}
+  burst: {{ .burstCreate }}
+  namespacedIterations: true
+  namespace: {{ $namespacePrefix }}
+  # verify object count after running each job
+  verifyObjects: true
+  errorOnVerify: true
+  # interval between jobs execution
+  jobIterationDelay: 20s
+  # wait all VMI be in the Ready Condition
+  waitWhenFinished: false
+  podWait: true
+  # timeout time after waiting for all object creation
+  maxWaitTimeout: {{ .maxWaitTimeout }}
+  jobPause: {{ .jobPause }}
+  cleanup: false
+  # Set missing key as empty to allow using default values
+  defaultMissingKeysWithZero: true
+  beforeCleanup: "config/scripts/check.sh check_vm_running {{ $jobCounterLabelKey }} {{ $jobCounterLabelValue }} all {{ .privateKey }} {{ .vmUser }} {{ .percentage_of_vms_to_validate | default 25 }} {{ .max_ssh_retries | default 8 }} {{ .resultsPath }}/{{ .runTimestamp }}/iteration-{{ .counter }}"
+  objects:
+  - objectTemplate: vm-per-host-template.yml
+    replicas: {{ $vmsPerNamespace }}
+    waitOptions:
+      labelSelector:
+        {{ $jobCounterLabelKey }}: {{ $jobCounterLabelValue }}
+    inputVars:
+      name: {{ $vmName }}
+      counter: {{ .counter | toString }}
+      sshPublicKeySecret: {{ .testName }}-ssh
+      OS: alpine
+      cpuRequest: {{ .vmCpuRequest }}
+      cpuLimit: {{ .vmCpuLimit }}
+      memory: {{ .vmMemory }}
+      storage: {{ $vmStorageSizeStr }}
+      storageclass: {{ .storageClassName }}
+      volumemode: Block
+      VMIrunning: true
+      scaleMode: {{ $scaleMode }}
+      targetNode: {{ $targetNode }}
+      nodeSelectorLabel: {{ .nodeSelectorLabel }}
+      vmLabels:
+        {{ $jobCounterLabelKey }}: {{ $jobCounterLabelValue }}
+
+# Shutdown VMs in batches (across all namespaces)
+- name: shutdown-vms
+  jobType: kubevirt
+  qps: {{ .qpsShutdown }}
+  burst: {{ .burstShutdown }}
+  jobIterations: {{ $namespaceCount }}
+  namespacedIterations: true
+  namespace: {{ $namespacePrefix }}
+  maxWaitTimeout: 30m
+  objectDelay: 10s
+  objectWait: true
+  beforeCleanup: "config/scripts/check.sh check_vm_shutdown {{ $jobCounterLabelKey }} {{ $jobCounterLabelValue }} all {{ .resultsPath }}/{{ .runTimestamp }}/iteration-{{ .counter }}"
+  objects:
+  - kubeVirtOp: stop
+    labelSelector:
+      {{ $jobCounterLabelKey }}: {{ $jobCounterLabelValue }}
+
+# Sleep between phases
+- name: sleep-between-phases
+  jobType: create
+  jobIterations: 1
+  qps: 1
+  burst: 1
+  namespacedIterations: true
+  namespace: {{ $namespacePrefix }}
+  maxWaitTimeout: 5m
+  jobPause: {{ .sleepBetweenPhases }}
+  cleanup: false
+  objects:
+  - objectTemplate: templates/sleep-job.yml
+    replicas: 1
+    inputVars:
+      name: sleep-job
+      counter: {{ .counter | toString }}
+      sleepDuration: "120" # 2 minutes in seconds
+
+# Start VMs as fast as possible (across all namespaces)
+- name: startup-vms
+  jobType: kubevirt
+  qps: {{ .qpsStartup }}
+  burst: {{ .burstStartup }}
+  jobIterations: {{ $namespaceCount }}
+  namespacedIterations: true
+  namespace: {{ $namespacePrefix }}
+  maxWaitTimeout: {{ .maxWaitTimeout }}
+  objectDelay: 1s
+  objectWait: true
+  beforeCleanup: "config/scripts/check.sh check_vm_running {{ $jobCounterLabelKey }} {{ $jobCounterLabelValue }} all {{ .privateKey }} {{ .vmUser }} {{ .percentage_of_vms_to_validate | default 25 }} {{ .max_ssh_retries | default 8 }} {{ .resultsPath }}/{{ .runTimestamp }}/iteration-{{ .counter }}"
+  objects:
+  - kubeVirtOp: start
+    labelSelector:
+      {{ $jobCounterLabelKey }}: {{ $jobCounterLabelValue }}
