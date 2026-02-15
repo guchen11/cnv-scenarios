@@ -64,7 +64,7 @@ burstStartup: 20
 
 # Timeout Configuration (reduced for sanity)
 maxWaitTimeout: "5m"
-jobPause: "30s"
+jobPause: "10s"
 
 # Monitoring Configuration (disabled for sanity)
 esServer: ""

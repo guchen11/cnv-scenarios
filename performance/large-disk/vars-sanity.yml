@@ -39,7 +39,7 @@ vmRunning: true
 
 # Timeout Configuration (reduced for sanity)
 maxWaitTimeout: "5m"
-jobPause: "1m"
+jobPause: "10s"
 
 # Node Targeting Configuration (optional)
 nodeSelector: ""
