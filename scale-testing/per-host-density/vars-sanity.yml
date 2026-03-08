@@ -68,6 +68,7 @@ jobPause: "30s"
 
 # Monitoring Configuration (disabled for sanity)
 esServer: ""
+metadataIndex: "cnv-metadata"
 PROM: ""
 PROM_TOKEN: ""
 

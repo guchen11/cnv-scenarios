@@ -43,6 +43,7 @@ jobPause: "1m"
 # Monitoring Configuration (disabled for sanity)
 # Use dummy values to prevent connection errors
 esServer: ""
+metadataIndex: "cnv-metadata"
 PROM: ""
 PROM_TOKEN: ""
 

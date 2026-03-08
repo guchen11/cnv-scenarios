@@ -37,5 +37,6 @@ cleanup: true
 
 # Monitoring Configuration
 esServer: http://f01-h08-000-1029u.rdu2.scalelab.redhat.com:9200
+metadataIndex: "cnv-metadata"
 PROM: '' 
 PROM_TOKEN: '' 

@@ -500,6 +500,38 @@ run_single_test() {
         logmain INFO "[$test_name] Moved kube-burner UUID logs to results directory"
     fi
     
+    # Collect and index cluster metadata (correlated via kube-burner UUID)
+    local kb_uuid=""
+    local metadata_file=""
+    local job_summary=$(find "$results_path" -name "jobSummary.json" -type f 2>/dev/null | head -1)
+    if [[ -n "$job_summary" && -f "$job_summary" ]]; then
+        kb_uuid=$(jq -r '.[0].uuid // ""' "$job_summary" 2>/dev/null)
+    fi
+    if [[ -n "$kb_uuid" ]]; then
+        local es_server=$(get_yaml_value "esServer" "$temp_vars" "")
+        local test_name_var=$(get_yaml_value "testName" "$temp_vars" "$test_name")
+        local metadata_index=$(get_yaml_value "metadataIndex" "$temp_vars" "cnv-metadata")
+        
+        logmain INFO "[$test_name] Collecting metadata (UUID: ${kb_uuid})"
+        if "${SCRIPT_DIR}/config/scripts/metadata-collector.sh" \
+            --uuid "$kb_uuid" \
+            --test-name "$test_name" \
+            --mode "$MODE" \
+            --run-timestamp "$run_timestamp" \
+            --vars-file "$temp_vars" \
+            --results-dir "$results_path" \
+            ${es_server:+--es-server "$es_server"} \
+            --metadata-index "$metadata_index" \
+            ${test_name_var:+--test-index "$test_name_var"}; then
+            metadata_file="${results_path}/metadata.json"
+            logmain INFO "[$test_name] Metadata collection complete"
+        else
+            logmain INFO "[$test_name] WARNING: Metadata collection failed (non-fatal)"
+        fi
+    else
+        logmain INFO "[$test_name] Skipping metadata collection (no kube-burner UUID found)"
+    fi
+    
     local end_time=$(date +%s)
     local duration=$((end_time - start_time))
     
@@ -532,6 +564,8 @@ run_single_test() {
       --argjson val_files "$val_files_json" \
       --argjson duration "$duration" \
       --arg timestamp "$(date -Iseconds)" \
+      --arg uuid "${kb_uuid:-}" \
+      --arg metadata_file "${metadata_file:-}" \
       '{
         test: $test,
         mode: $mode,
@@ -541,7 +575,9 @@ run_single_test() {
         validation_status: $val_status,
         validation_files: $val_files,
         duration_seconds: $duration,
-        timestamp: $timestamp
+        timestamp: $timestamp,
+        uuid: $uuid,
+        metadata_file: $metadata_file
       }' > "$summary_json"
     
     # Run test-specific cleanup (e.g., delete namespaces if cleanup=true)

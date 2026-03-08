@@ -1,0 +1,574 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": "-- Grafana --",
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "description": "Browse and filter all CNV test executions by scenario, OCP version, platform, and date range",
+  "editable": true,
+  "gnetId": null,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [
+    {
+      "icon": "external link",
+      "tags": ["cnv"],
+      "title": "Run Detail",
+      "tooltip": "Open Run Detail dashboard",
+      "type": "dashboards",
+      "url": ""
+    }
+  ],
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "id": 100,
+      "title": "Summary",
+      "type": "row"
+    },
+    {
+      "datasource": "${DS_ELASTICSEARCH}",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "blue", "value": null }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 1 },
+      "id": 1,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": ["count"],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "title": "Total Runs",
+      "type": "stat",
+      "targets": [
+        {
+          "alias": "",
+          "bucketAggs": [
+            {
+              "field": "timestamp",
+              "id": "2",
+              "settings": { "interval": "auto" },
+              "type": "date_histogram"
+            }
+          ],
+          "metrics": [
+            {
+              "id": "1",
+              "type": "count"
+            }
+          ],
+          "query": "metricName:metadata AND testName.keyword:$testName",
+          "refId": "A",
+          "timeField": "timestamp"
+        }
+      ]
+    },
+    {
+      "datasource": "${DS_ELASTICSEARCH}",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "max": 100,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "yellow", "value": 70 },
+              { "color": "green", "value": 90 }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 1 },
+      "id": 2,
+      "options": {
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true
+      },
+      "title": "Pass Rate",
+      "description": "Percentage of runs with exit code 0 (approximation based on available data)",
+      "type": "gauge",
+      "targets": [
+        {
+          "alias": "",
+          "bucketAggs": [],
+          "metrics": [
+            {
+              "id": "1",
+              "type": "count"
+            }
+          ],
+          "query": "metricName:metadata AND testName.keyword:$testName",
+          "refId": "A",
+          "timeField": "timestamp"
+        }
+      ]
+    },
+    {
+      "datasource": "${DS_ELASTICSEARCH}",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "purple", "value": null }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 1 },
+      "id": 3,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": ["count"],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "title": "Unique OCP Versions",
+      "type": "stat",
+      "targets": [
+        {
+          "alias": "",
+          "bucketAggs": [
+            {
+              "field": "cluster.ocpVersion.keyword",
+              "id": "2",
+              "settings": {
+                "min_doc_count": "1",
+                "order": "desc",
+                "orderBy": "_count",
+                "size": "0"
+              },
+              "type": "terms"
+            }
+          ],
+          "metrics": [
+            {
+              "id": "1",
+              "type": "cardinality",
+              "field": "cluster.ocpVersion.keyword"
+            }
+          ],
+          "query": "metricName:metadata AND testName.keyword:$testName",
+          "refId": "A",
+          "timeField": "timestamp"
+        }
+      ]
+    },
+    {
+      "datasource": "${DS_ELASTICSEARCH}",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "orange", "value": null }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 1 },
+      "id": 4,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": ["count"],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "title": "Unique Platforms",
+      "type": "stat",
+      "targets": [
+        {
+          "alias": "",
+          "bucketAggs": [],
+          "metrics": [
+            {
+              "id": "1",
+              "type": "cardinality",
+              "field": "cluster.platform.keyword"
+            }
+          ],
+          "query": "metricName:metadata AND testName.keyword:$testName",
+          "refId": "A",
+          "timeField": "timestamp"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 5 },
+      "id": 101,
+      "title": "All Runs",
+      "type": "row"
+    },
+    {
+      "datasource": "${DS_ELASTICSEARCH}",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "displayMode": "auto",
+            "inspect": true
+          }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "timestamp" },
+            "properties": [
+              { "id": "custom.width", "value": 180 }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "uuid" },
+            "properties": [
+              { "id": "custom.width", "value": 280 },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "View Run Detail",
+                    "url": "/d/cnv-run-detail/cnv-run-detail?var-uuid=${__value.text}",
+                    "targetBlank": true
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "testMode" },
+            "properties": [
+              { "id": "custom.width", "value": 80 }
+            ]
+          }
+        ]
+      },
+      "gridPos": { "h": 14, "w": 24, "x": 0, "y": 6 },
+      "id": 5,
+      "options": {
+        "showHeader": true,
+        "sortBy": [
+          { "desc": true, "displayName": "timestamp" }
+        ],
+        "footer": {
+          "show": false,
+          "reducer": ["sum"],
+          "fields": ""
+        }
+      },
+      "title": "Test Runs",
+      "description": "Click UUID to drill into run detail",
+      "type": "table",
+      "targets": [
+        {
+          "alias": "",
+          "bucketAggs": [],
+          "metrics": [
+            {
+              "id": "1",
+              "settings": {
+                "size": "500"
+              },
+              "type": "raw_document"
+            }
+          ],
+          "query": "metricName:metadata AND testName.keyword:$testName AND cluster.ocpVersion.keyword:$ocpVersion AND cluster.platform.keyword:$platform",
+          "refId": "A",
+          "timeField": "timestamp"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "_id": true,
+              "_index": true,
+              "_type": true,
+              "metricName": true,
+              "nodes": true,
+              "operators": true,
+              "storage": true,
+              "testConfig": true,
+              "cluster.apiUrl": true,
+              "cluster.clusterId": true
+            },
+            "indexByName": {
+              "timestamp": 0,
+              "testName": 1,
+              "testMode": 2,
+              "uuid": 3,
+              "cluster.ocpVersion": 4,
+              "operators.cnvVersion": 5,
+              "cluster.platform": 6,
+              "cluster.networkType": 7,
+              "nodes.workers": 8,
+              "kubeBurnerVersion": 9,
+              "runTimestamp": 10
+            },
+            "renameByName": {
+              "cluster.ocpVersion": "OCP Version",
+              "cluster.platform": "Platform",
+              "cluster.networkType": "Network",
+              "operators.cnvVersion": "CNV Version",
+              "nodes.workers": "Workers",
+              "kubeBurnerVersion": "KB Version",
+              "testName": "Test",
+              "testMode": "Mode",
+              "runTimestamp": "Run ID"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 20 },
+      "id": 102,
+      "title": "Trends",
+      "type": "row"
+    },
+    {
+      "datasource": "${DS_ELASTICSEARCH}",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "axisLabel": "Runs",
+            "drawStyle": "bars",
+            "fillOpacity": 80,
+            "lineWidth": 1,
+            "pointSize": 5,
+            "showPoints": "never",
+            "stacking": { "group": "A", "mode": "normal" }
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 21 },
+      "id": 6,
+      "options": {
+        "legend": { "calcs": [], "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "multi" }
+      },
+      "title": "Runs Over Time by Test",
+      "type": "timeseries",
+      "targets": [
+        {
+          "alias": "{{term testName.keyword}}",
+          "bucketAggs": [
+            {
+              "field": "testName.keyword",
+              "id": "3",
+              "settings": {
+                "min_doc_count": "1",
+                "order": "desc",
+                "orderBy": "_count",
+                "size": "20"
+              },
+              "type": "terms"
+            },
+            {
+              "field": "timestamp",
+              "id": "2",
+              "settings": { "interval": "1d" },
+              "type": "date_histogram"
+            }
+          ],
+          "metrics": [
+            {
+              "id": "1",
+              "type": "count"
+            }
+          ],
+          "query": "metricName:metadata AND testName.keyword:$testName",
+          "refId": "A",
+          "timeField": "timestamp"
+        }
+      ]
+    },
+    {
+      "datasource": "${DS_ELASTICSEARCH}",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "axisLabel": "Runs",
+            "drawStyle": "bars",
+            "fillOpacity": 80,
+            "lineWidth": 1,
+            "pointSize": 5,
+            "showPoints": "never",
+            "stacking": { "group": "A", "mode": "normal" }
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 21 },
+      "id": 7,
+      "options": {
+        "legend": { "calcs": [], "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "multi" }
+      },
+      "title": "Runs by OCP Version Over Time",
+      "type": "timeseries",
+      "targets": [
+        {
+          "alias": "OCP {{term cluster.ocpVersion.keyword}}",
+          "bucketAggs": [
+            {
+              "field": "cluster.ocpVersion.keyword",
+              "id": "3",
+              "settings": {
+                "min_doc_count": "1",
+                "order": "desc",
+                "orderBy": "_count",
+                "size": "20"
+              },
+              "type": "terms"
+            },
+            {
+              "field": "timestamp",
+              "id": "2",
+              "settings": { "interval": "1d" },
+              "type": "date_histogram"
+            }
+          ],
+          "metrics": [
+            {
+              "id": "1",
+              "type": "count"
+            }
+          ],
+          "query": "metricName:metadata AND testName.keyword:$testName",
+          "refId": "A",
+          "timeField": "timestamp"
+        }
+      ]
+    }
+  ],
+  "refresh": false,
+  "schemaVersion": 30,
+  "style": "dark",
+  "tags": ["cnv", "metadata", "explorer"],
+  "templating": {
+    "list": [
+      {
+        "current": {},
+        "hide": 0,
+        "label": "Elasticsearch",
+        "name": "DS_ELASTICSEARCH",
+        "options": [],
+        "query": "elasticsearch",
+        "refresh": 1,
+        "type": "datasource"
+      },
+      {
+        "allValue": "*",
+        "current": {},
+        "datasource": "${DS_ELASTICSEARCH}",
+        "definition": "{\"find\": \"terms\", \"field\": \"testName.keyword\", \"query\": \"metricName:metadata\"}",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Test Name",
+        "multi": true,
+        "name": "testName",
+        "options": [],
+        "query": "{\"find\": \"terms\", \"field\": \"testName.keyword\", \"query\": \"metricName:metadata\"}",
+        "refresh": 2,
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "allValue": "*",
+        "current": {},
+        "datasource": "${DS_ELASTICSEARCH}",
+        "definition": "{\"find\": \"terms\", \"field\": \"cluster.ocpVersion.keyword\", \"query\": \"metricName:metadata\"}",
+        "hide": 0,
+        "includeAll": true,
+        "label": "OCP Version",
+        "multi": true,
+        "name": "ocpVersion",
+        "options": [],
+        "query": "{\"find\": \"terms\", \"field\": \"cluster.ocpVersion.keyword\", \"query\": \"metricName:metadata\"}",
+        "refresh": 2,
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "allValue": "*",
+        "current": {},
+        "datasource": "${DS_ELASTICSEARCH}",
+        "definition": "{\"find\": \"terms\", \"field\": \"cluster.platform.keyword\", \"query\": \"metricName:metadata\"}",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Platform",
+        "multi": true,
+        "name": "platform",
+        "options": [],
+        "query": "{\"find\": \"terms\", \"field\": \"cluster.platform.keyword\", \"query\": \"metricName:metadata\"}",
+        "refresh": 2,
+        "sort": 1,
+        "type": "query"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-30d",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "CNV Run Explorer",
+  "uid": "cnv-run-explorer",
+  "version": 1
+}

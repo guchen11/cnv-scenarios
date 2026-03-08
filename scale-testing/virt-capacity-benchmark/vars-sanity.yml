@@ -38,5 +38,6 @@ cleanup: true
 
 # Monitoring Configuration
 esServer: ''
+metadataIndex: "cnv-metadata"
 PROM: '' 
 PROM_TOKEN: ''

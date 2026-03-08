@@ -1,0 +1,916 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": "-- Grafana --",
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "description": "Compare two or more CNV test runs side-by-side: metadata differences, latency comparison, and configuration diff",
+  "editable": true,
+  "gnetId": null,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [
+    {
+      "icon": "external link",
+      "tags": ["cnv"],
+      "title": "Run Explorer",
+      "tooltip": "Back to Run Explorer",
+      "type": "dashboards",
+      "url": ""
+    }
+  ],
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "id": 100,
+      "title": "Run A: Metadata",
+      "type": "row"
+    },
+    {
+      "datasource": "${DS_METADATA}",
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "align": "auto", "displayMode": "color-text", "inspect": true }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 5, "w": 24, "x": 0, "y": 1 },
+      "id": 1,
+      "options": {
+        "showHeader": true,
+        "footer": { "show": false, "reducer": ["sum"], "fields": "" }
+      },
+      "title": "Run A Overview",
+      "type": "table",
+      "targets": [
+        {
+          "bucketAggs": [],
+          "metrics": [{ "id": "1", "settings": { "size": "1" }, "type": "raw_document" }],
+          "query": "metricName:metadata AND uuid.keyword:$uuid_a",
+          "refId": "A",
+          "timeField": "timestamp"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "_id": true,
+              "_index": true,
+              "_type": true,
+              "metricName": true,
+              "nodes.workerDetails": true,
+              "storage.classes": true,
+              "testConfig.varsFile": true
+            },
+            "indexByName": {
+              "testName": 0,
+              "testMode": 1,
+              "uuid": 2,
+              "runTimestamp": 3,
+              "cluster.ocpVersion": 4,
+              "cluster.platform": 5,
+              "cluster.networkType": 6,
+              "operators.cnvVersion": 7,
+              "operators.odfVersion": 8,
+              "nodes.workers": 9,
+              "testConfig.vmCount": 10,
+              "testConfig.cpuCores": 11,
+              "testConfig.memory": 12,
+              "testConfig.storage": 13,
+              "testConfig.storageClassName": 14
+            },
+            "renameByName": {
+              "testName": "Test",
+              "testMode": "Mode",
+              "runTimestamp": "Run ID",
+              "cluster.ocpVersion": "OCP",
+              "cluster.platform": "Platform",
+              "cluster.networkType": "Network",
+              "operators.cnvVersion": "CNV",
+              "operators.odfVersion": "ODF",
+              "nodes.workers": "Workers",
+              "testConfig.vmCount": "VMs",
+              "testConfig.cpuCores": "CPUs",
+              "testConfig.memory": "Memory",
+              "testConfig.storage": "Storage",
+              "testConfig.storageClassName": "SC"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 6 },
+      "id": 101,
+      "title": "Run B: Metadata",
+      "type": "row"
+    },
+    {
+      "datasource": "${DS_METADATA}",
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "align": "auto", "displayMode": "color-text", "inspect": true }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 5, "w": 24, "x": 0, "y": 7 },
+      "id": 2,
+      "options": {
+        "showHeader": true,
+        "footer": { "show": false, "reducer": ["sum"], "fields": "" }
+      },
+      "title": "Run B Overview",
+      "type": "table",
+      "targets": [
+        {
+          "bucketAggs": [],
+          "metrics": [{ "id": "1", "settings": { "size": "1" }, "type": "raw_document" }],
+          "query": "metricName:metadata AND uuid.keyword:$uuid_b",
+          "refId": "A",
+          "timeField": "timestamp"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "_id": true,
+              "_index": true,
+              "_type": true,
+              "metricName": true,
+              "nodes.workerDetails": true,
+              "storage.classes": true,
+              "testConfig.varsFile": true
+            },
+            "indexByName": {
+              "testName": 0,
+              "testMode": 1,
+              "uuid": 2,
+              "runTimestamp": 3,
+              "cluster.ocpVersion": 4,
+              "cluster.platform": 5,
+              "cluster.networkType": 6,
+              "operators.cnvVersion": 7,
+              "operators.odfVersion": 8,
+              "nodes.workers": 9,
+              "testConfig.vmCount": 10,
+              "testConfig.cpuCores": 11,
+              "testConfig.memory": 12,
+              "testConfig.storage": 13,
+              "testConfig.storageClassName": 14
+            },
+            "renameByName": {
+              "testName": "Test",
+              "testMode": "Mode",
+              "runTimestamp": "Run ID",
+              "cluster.ocpVersion": "OCP",
+              "cluster.platform": "Platform",
+              "cluster.networkType": "Network",
+              "operators.cnvVersion": "CNV",
+              "operators.odfVersion": "ODF",
+              "nodes.workers": "Workers",
+              "testConfig.vmCount": "VMs",
+              "testConfig.cpuCores": "CPUs",
+              "testConfig.memory": "Memory",
+              "testConfig.storage": "Storage",
+              "testConfig.storageClassName": "SC"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 12 },
+      "id": 102,
+      "title": "VMI Latency Comparison",
+      "type": "row"
+    },
+    {
+      "datasource": "${DS_METRICS}",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "axisLabel": "Latency (ms)",
+            "drawStyle": "bars",
+            "fillOpacity": 80,
+            "lineWidth": 1,
+            "showPoints": "never",
+            "barAlignment": 0,
+            "gradientMode": "none"
+          },
+          "unit": "ms"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 10, "w": 12, "x": 0, "y": 13 },
+      "id": 3,
+      "options": {
+        "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom" },
+        "tooltip": { "mode": "multi" }
+      },
+      "title": "Run A: VMI Latency Quantiles",
+      "type": "table",
+      "targets": [
+        {
+          "bucketAggs": [],
+          "metrics": [{ "id": "1", "settings": { "size": "500" }, "type": "raw_document" }],
+          "query": "metricName:vmiLatencyQuantilesMeasurement AND uuid.keyword:$uuid_a",
+          "refId": "A",
+          "timeField": "timestamp"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "_id": true,
+              "_index": true,
+              "_type": true,
+              "uuid": true,
+              "metricName": true,
+              "jobName": true,
+              "metadata": true,
+              "timestamp": true,
+              "min": true,
+              "max": true,
+              "avg": true
+            },
+            "indexByName": { "quantileName": 0, "P50": 1, "P95": 2, "P99": 3 },
+            "renameByName": {
+              "quantileName": "Phase",
+              "P50": "P50 (ms)",
+              "P95": "P95 (ms)",
+              "P99": "P99 (ms)"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "datasource": "${DS_METRICS}",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "axisLabel": "Latency (ms)",
+            "drawStyle": "bars",
+            "fillOpacity": 80,
+            "lineWidth": 1,
+            "showPoints": "never",
+            "barAlignment": 0,
+            "gradientMode": "none"
+          },
+          "unit": "ms"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 10, "w": 12, "x": 12, "y": 13 },
+      "id": 4,
+      "options": {
+        "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom" },
+        "tooltip": { "mode": "multi" }
+      },
+      "title": "Run B: VMI Latency Quantiles",
+      "type": "table",
+      "targets": [
+        {
+          "bucketAggs": [],
+          "metrics": [{ "id": "1", "settings": { "size": "500" }, "type": "raw_document" }],
+          "query": "metricName:vmiLatencyQuantilesMeasurement AND uuid.keyword:$uuid_b",
+          "refId": "A",
+          "timeField": "timestamp"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "_id": true,
+              "_index": true,
+              "_type": true,
+              "uuid": true,
+              "metricName": true,
+              "jobName": true,
+              "metadata": true,
+              "timestamp": true,
+              "min": true,
+              "max": true,
+              "avg": true
+            },
+            "indexByName": { "quantileName": 0, "P50": 1, "P95": 2, "P99": 3 },
+            "renameByName": {
+              "quantileName": "Phase",
+              "P50": "P50 (ms)",
+              "P95": "P95 (ms)",
+              "P99": "P99 (ms)"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 23 },
+      "id": 103,
+      "title": "PVC Latency Comparison",
+      "type": "row"
+    },
+    {
+      "datasource": "${DS_METRICS}",
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "align": "auto", "displayMode": "auto", "inspect": true },
+          "unit": "ms"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 24 },
+      "id": 5,
+      "options": {
+        "showHeader": true,
+        "footer": { "show": false, "reducer": ["sum"], "fields": "" }
+      },
+      "title": "Run A: PVC Latency",
+      "type": "table",
+      "targets": [
+        {
+          "bucketAggs": [],
+          "metrics": [{ "id": "1", "settings": { "size": "500" }, "type": "raw_document" }],
+          "query": "metricName:pvcLatencyMeasurement AND uuid.keyword:$uuid_a",
+          "refId": "A",
+          "timeField": "timestamp"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "_id": true,
+              "_index": true,
+              "_type": true,
+              "uuid": true,
+              "metricName": true,
+              "jobName": true,
+              "metadata": true,
+              "jobIteration": true,
+              "replica": true,
+              "timestamp": true,
+              "namespace": true
+            },
+            "indexByName": { "pvcName": 0, "storageClass": 1, "size": 2, "pendingLatency": 3, "bindingLatency": 4, "lostLatency": 5 },
+            "renameByName": {
+              "pvcName": "PVC",
+              "storageClass": "SC",
+              "pendingLatency": "Pending (ms)",
+              "bindingLatency": "Binding (ms)",
+              "lostLatency": "Lost (ms)"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "datasource": "${DS_METRICS}",
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "align": "auto", "displayMode": "auto", "inspect": true },
+          "unit": "ms"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 24 },
+      "id": 6,
+      "options": {
+        "showHeader": true,
+        "footer": { "show": false, "reducer": ["sum"], "fields": "" }
+      },
+      "title": "Run B: PVC Latency",
+      "type": "table",
+      "targets": [
+        {
+          "bucketAggs": [],
+          "metrics": [{ "id": "1", "settings": { "size": "500" }, "type": "raw_document" }],
+          "query": "metricName:pvcLatencyMeasurement AND uuid.keyword:$uuid_b",
+          "refId": "A",
+          "timeField": "timestamp"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "_id": true,
+              "_index": true,
+              "_type": true,
+              "uuid": true,
+              "metricName": true,
+              "jobName": true,
+              "metadata": true,
+              "jobIteration": true,
+              "replica": true,
+              "timestamp": true,
+              "namespace": true
+            },
+            "indexByName": { "pvcName": 0, "storageClass": 1, "size": 2, "pendingLatency": 3, "bindingLatency": 4, "lostLatency": 5 },
+            "renameByName": {
+              "pvcName": "PVC",
+              "storageClass": "SC",
+              "pendingLatency": "Pending (ms)",
+              "bindingLatency": "Binding (ms)",
+              "lostLatency": "Lost (ms)"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 32 },
+      "id": 104,
+      "title": "Environment Diff",
+      "type": "row"
+    },
+    {
+      "datasource": "${DS_METADATA}",
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "align": "auto", "displayMode": "color-text", "inspect": true }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 6, "w": 12, "x": 0, "y": 33 },
+      "id": 7,
+      "options": {
+        "showHeader": true,
+        "footer": { "show": false, "reducer": ["sum"], "fields": "" }
+      },
+      "title": "Run A: Operators",
+      "type": "table",
+      "targets": [
+        {
+          "bucketAggs": [],
+          "metrics": [{ "id": "1", "settings": { "size": "1" }, "type": "raw_document" }],
+          "query": "metricName:metadata AND uuid.keyword:$uuid_a",
+          "refId": "A",
+          "timeField": "timestamp"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "_id": true,
+              "_index": true,
+              "_type": true,
+              "metricName": true,
+              "uuid": true,
+              "timestamp": true,
+              "testName": true,
+              "testMode": true,
+              "runTimestamp": true,
+              "kubeBurnerVersion": true,
+              "cluster": true,
+              "nodes": true,
+              "storage": true,
+              "testConfig": true
+            },
+            "renameByName": {
+              "operators.cnvVersion": "CNV",
+              "operators.hcoVersion": "HCO",
+              "operators.odfVersion": "ODF",
+              "operators.sriovVersion": "SR-IOV",
+              "operators.nmstateVersion": "NMState"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "datasource": "${DS_METADATA}",
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "align": "auto", "displayMode": "color-text", "inspect": true }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 6, "w": 12, "x": 12, "y": 33 },
+      "id": 8,
+      "options": {
+        "showHeader": true,
+        "footer": { "show": false, "reducer": ["sum"], "fields": "" }
+      },
+      "title": "Run B: Operators",
+      "type": "table",
+      "targets": [
+        {
+          "bucketAggs": [],
+          "metrics": [{ "id": "1", "settings": { "size": "1" }, "type": "raw_document" }],
+          "query": "metricName:metadata AND uuid.keyword:$uuid_b",
+          "refId": "A",
+          "timeField": "timestamp"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "_id": true,
+              "_index": true,
+              "_type": true,
+              "metricName": true,
+              "uuid": true,
+              "timestamp": true,
+              "testName": true,
+              "testMode": true,
+              "runTimestamp": true,
+              "kubeBurnerVersion": true,
+              "cluster": true,
+              "nodes": true,
+              "storage": true,
+              "testConfig": true
+            },
+            "renameByName": {
+              "operators.cnvVersion": "CNV",
+              "operators.hcoVersion": "HCO",
+              "operators.odfVersion": "ODF",
+              "operators.sriovVersion": "SR-IOV",
+              "operators.nmstateVersion": "NMState"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 39 },
+      "id": 105,
+      "title": "Node Hardware Comparison",
+      "type": "row"
+    },
+    {
+      "datasource": "${DS_METADATA}",
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "align": "auto", "displayMode": "auto", "inspect": true }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 40 },
+      "id": 9,
+      "options": {
+        "showHeader": true,
+        "footer": { "show": false, "reducer": ["sum"], "fields": "" }
+      },
+      "title": "Run A: Worker Nodes",
+      "type": "table",
+      "targets": [
+        {
+          "bucketAggs": [],
+          "metrics": [{ "id": "1", "settings": { "size": "1" }, "type": "raw_document" }],
+          "query": "metricName:metadata AND uuid.keyword:$uuid_a",
+          "refId": "A",
+          "timeField": "timestamp"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "extractFields",
+          "options": {
+            "source": "nodes.workerDetails",
+            "format": "json"
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "_id": true,
+              "_index": true,
+              "_type": true,
+              "uuid": true,
+              "metricName": true,
+              "cluster": true,
+              "operators": true,
+              "storage": true,
+              "testConfig": true,
+              "testName": true,
+              "testMode": true,
+              "runTimestamp": true,
+              "timestamp": true,
+              "kubeBurnerVersion": true,
+              "nodes.total": true,
+              "nodes.masters": true,
+              "nodes.workers": true
+            },
+            "renameByName": {
+              "name": "Node",
+              "cpuModel": "CPU",
+              "cpuCores": "Cores",
+              "memoryGiB": "RAM (GiB)",
+              "architecture": "Arch"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "datasource": "${DS_METADATA}",
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "align": "auto", "displayMode": "auto", "inspect": true }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 40 },
+      "id": 10,
+      "options": {
+        "showHeader": true,
+        "footer": { "show": false, "reducer": ["sum"], "fields": "" }
+      },
+      "title": "Run B: Worker Nodes",
+      "type": "table",
+      "targets": [
+        {
+          "bucketAggs": [],
+          "metrics": [{ "id": "1", "settings": { "size": "1" }, "type": "raw_document" }],
+          "query": "metricName:metadata AND uuid.keyword:$uuid_b",
+          "refId": "A",
+          "timeField": "timestamp"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "extractFields",
+          "options": {
+            "source": "nodes.workerDetails",
+            "format": "json"
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "_id": true,
+              "_index": true,
+              "_type": true,
+              "uuid": true,
+              "metricName": true,
+              "cluster": true,
+              "operators": true,
+              "storage": true,
+              "testConfig": true,
+              "testName": true,
+              "testMode": true,
+              "runTimestamp": true,
+              "timestamp": true,
+              "kubeBurnerVersion": true,
+              "nodes.total": true,
+              "nodes.masters": true,
+              "nodes.workers": true
+            },
+            "renameByName": {
+              "name": "Node",
+              "cpuModel": "CPU",
+              "cpuCores": "Cores",
+              "memoryGiB": "RAM (GiB)",
+              "architecture": "Arch"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 48 },
+      "id": 106,
+      "title": "VMI Per-VM Latency Comparison",
+      "type": "row"
+    },
+    {
+      "datasource": "${DS_METRICS}",
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "align": "auto", "displayMode": "auto", "inspect": true },
+          "unit": "ms"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 10, "w": 12, "x": 0, "y": 49 },
+      "id": 11,
+      "options": {
+        "showHeader": true,
+        "sortBy": [{ "desc": false, "displayName": "VM" }],
+        "footer": { "show": false, "reducer": ["sum"], "fields": "" }
+      },
+      "title": "Run A: VMI Per-VM Latency",
+      "type": "table",
+      "targets": [
+        {
+          "bucketAggs": [],
+          "metrics": [{ "id": "1", "settings": { "size": "500" }, "type": "raw_document" }],
+          "query": "metricName:vmiLatencyMeasurement AND uuid.keyword:$uuid_a",
+          "refId": "A",
+          "timeField": "timestamp"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "_id": true,
+              "_index": true,
+              "_type": true,
+              "uuid": true,
+              "metricName": true,
+              "jobName": true,
+              "metadata": true,
+              "jobIteration": true,
+              "replica": true,
+              "timestamp": true,
+              "podName": true,
+              "vmiName": true,
+              "namespace": true
+            },
+            "indexByName": {
+              "vmName": 0,
+              "nodeName": 1,
+              "vmiCreatedLatency": 2,
+              "vmiRunningLatency": 3,
+              "vmReadyLatency": 4,
+              "podCreatedLatency": 5,
+              "podReadyLatency": 6
+            },
+            "renameByName": {
+              "vmName": "VM",
+              "nodeName": "Node",
+              "vmiCreatedLatency": "VMI Created",
+              "vmiRunningLatency": "VMI Running",
+              "vmReadyLatency": "VM Ready",
+              "podCreatedLatency": "Pod Created",
+              "podReadyLatency": "Pod Ready"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "datasource": "${DS_METRICS}",
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "align": "auto", "displayMode": "auto", "inspect": true },
+          "unit": "ms"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 10, "w": 12, "x": 12, "y": 49 },
+      "id": 12,
+      "options": {
+        "showHeader": true,
+        "sortBy": [{ "desc": false, "displayName": "VM" }],
+        "footer": { "show": false, "reducer": ["sum"], "fields": "" }
+      },
+      "title": "Run B: VMI Per-VM Latency",
+      "type": "table",
+      "targets": [
+        {
+          "bucketAggs": [],
+          "metrics": [{ "id": "1", "settings": { "size": "500" }, "type": "raw_document" }],
+          "query": "metricName:vmiLatencyMeasurement AND uuid.keyword:$uuid_b",
+          "refId": "A",
+          "timeField": "timestamp"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "_id": true,
+              "_index": true,
+              "_type": true,
+              "uuid": true,
+              "metricName": true,
+              "jobName": true,
+              "metadata": true,
+              "jobIteration": true,
+              "replica": true,
+              "timestamp": true,
+              "podName": true,
+              "vmiName": true,
+              "namespace": true
+            },
+            "indexByName": {
+              "vmName": 0,
+              "nodeName": 1,
+              "vmiCreatedLatency": 2,
+              "vmiRunningLatency": 3,
+              "vmReadyLatency": 4,
+              "podCreatedLatency": 5,
+              "podReadyLatency": 6
+            },
+            "renameByName": {
+              "vmName": "VM",
+              "nodeName": "Node",
+              "vmiCreatedLatency": "VMI Created",
+              "vmiRunningLatency": "VMI Running",
+              "vmReadyLatency": "VM Ready",
+              "podCreatedLatency": "Pod Created",
+              "podReadyLatency": "Pod Ready"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "refresh": false,
+  "schemaVersion": 30,
+  "style": "dark",
+  "tags": ["cnv", "metadata", "comparison"],
+  "templating": {
+    "list": [
+      {
+        "current": {},
+        "hide": 0,
+        "label": "Metadata DS",
+        "name": "DS_METADATA",
+        "options": [],
+        "query": "elasticsearch",
+        "refresh": 1,
+        "type": "datasource"
+      },
+      {
+        "current": {},
+        "hide": 0,
+        "label": "Metrics DS",
+        "name": "DS_METRICS",
+        "options": [],
+        "query": "elasticsearch",
+        "refresh": 1,
+        "type": "datasource"
+      },
+      {
+        "allValue": null,
+        "current": {},
+        "datasource": "${DS_METADATA}",
+        "definition": "{\"find\": \"terms\", \"field\": \"uuid.keyword\", \"query\": \"metricName:metadata\"}",
+        "hide": 0,
+        "includeAll": false,
+        "label": "Run A (UUID)",
+        "multi": false,
+        "name": "uuid_a",
+        "options": [],
+        "query": "{\"find\": \"terms\", \"field\": \"uuid.keyword\", \"query\": \"metricName:metadata\"}",
+        "refresh": 2,
+        "sort": 2,
+        "type": "query"
+      },
+      {
+        "allValue": null,
+        "current": {},
+        "datasource": "${DS_METADATA}",
+        "definition": "{\"find\": \"terms\", \"field\": \"uuid.keyword\", \"query\": \"metricName:metadata\"}",
+        "hide": 0,
+        "includeAll": false,
+        "label": "Run B (UUID)",
+        "multi": false,
+        "name": "uuid_b",
+        "options": [],
+        "query": "{\"find\": \"terms\", \"field\": \"uuid.keyword\", \"query\": \"metricName:metadata\"}",
+        "refresh": 2,
+        "sort": 2,
+        "type": "query"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-90d",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "CNV Run Comparison",
+  "uid": "cnv-run-comparison",
+  "version": 1
+}

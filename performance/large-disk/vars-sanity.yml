@@ -46,5 +46,6 @@ nodeSelector: ""
 
 # Monitoring Configuration (disabled for sanity)
 esServer: ""
+metadataIndex: "cnv-metadata"
 PROM: ""
 PROM_TOKEN: ""
