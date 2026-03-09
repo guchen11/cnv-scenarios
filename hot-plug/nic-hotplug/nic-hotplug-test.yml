@@ -1,8 +1,8 @@
 {{- $PROM := .PROM -}}
 {{- $PROM_TOKEN := .PROM_TOKEN -}}
 {{- $kubeBurnerFQDN := "kube-burner.io" -}}
-{{- $testName := "nic-hotplug-test" }}
-{{- $nsName := .testNamespace | default "nic-hotplug-test" -}}
+{{- $testName := "cnv-nic-hotplug" }}
+{{- $nsName := .testNamespace | default "cnv-nic-hotplug" -}}
 {{- $nicCount := .nicCount | default 25 -}}
 {{- $sshPublicKeySecretName := "multi-nic-vm" -}}
 {{- $jobCounterLabelKey := (list $testName "." $kubeBurnerFQDN "/counter") | join "" -}}

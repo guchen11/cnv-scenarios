@@ -3,8 +3,9 @@
 # metadata-collector.sh - Collect OCP cluster and environment metadata
 #
 # Gathers cluster version, node hardware, operator versions, storage classes,
-# and test configuration. Outputs metadata.json and optionally indexes to
-# Elasticsearch for correlation with kube-burner metrics via UUID.
+# test configuration, validation results, and run summary. Outputs metadata.json
+# and optionally indexes to Elasticsearch for correlation with kube-burner
+# metrics via UUID.
 #
 # Usage:
 #   metadata-collector.sh \
@@ -14,6 +15,9 @@
 #     --run-timestamp <run-YYYYMMDD-HHMMSS> \
 #     --vars-file <path-to-temp-vars> \
 #     --results-dir <path-to-results> \
+#     [--exit-code <0|1>] \
+#     [--duration <seconds>] \
+#     [--validation-dir <path>] \
 #     [--es-server <url>] \
 #     [--metadata-index <name>] \
 #     [--test-index <name>]
@@ -31,21 +35,27 @@ MODE=""
 RUN_TIMESTAMP=""
 VARS_FILE=""
 RESULTS_DIR=""
+EXIT_CODE=""
+DURATION=""
+VALIDATION_DIR=""
 ES_SERVER=""
 METADATA_INDEX="cnv-metadata"
 TEST_INDEX=""
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        --uuid)          UUID="$2";          shift 2 ;;
-        --test-name)     TEST_NAME="$2";     shift 2 ;;
-        --mode)          MODE="$2";          shift 2 ;;
-        --run-timestamp) RUN_TIMESTAMP="$2"; shift 2 ;;
-        --vars-file)     VARS_FILE="$2";     shift 2 ;;
-        --results-dir)   RESULTS_DIR="$2";   shift 2 ;;
-        --es-server)     ES_SERVER="$2";     shift 2 ;;
+        --uuid)           UUID="$2";           shift 2 ;;
+        --test-name)      TEST_NAME="$2";      shift 2 ;;
+        --mode)           MODE="$2";           shift 2 ;;
+        --run-timestamp)  RUN_TIMESTAMP="$2";  shift 2 ;;
+        --vars-file)      VARS_FILE="$2";      shift 2 ;;
+        --results-dir)    RESULTS_DIR="$2";    shift 2 ;;
+        --exit-code)      EXIT_CODE="$2";      shift 2 ;;
+        --duration)       DURATION="$2";       shift 2 ;;
+        --validation-dir) VALIDATION_DIR="$2"; shift 2 ;;
+        --es-server)      ES_SERVER="$2";      shift 2 ;;
         --metadata-index) METADATA_INDEX="$2"; shift 2 ;;
-        --test-index)    TEST_INDEX="$2";    shift 2 ;;
+        --test-index)     TEST_INDEX="$2";     shift 2 ;;
         *)
             echo "metadata-collector: Unknown argument: $1" >&2
             exit 1
@@ -203,6 +213,83 @@ else
 fi
 
 # =============================================================================
+# TEST CATEGORY (derived from test name)
+# =============================================================================
+
+declare -A CATEGORY_MAP=(
+    ["cpu-limits"]="Resource Limits"
+    ["memory-limits"]="Resource Limits"
+    ["disk-limits"]="Resource Limits"
+    ["disk-hotplug"]="Hot-plug"
+    ["nic-hotplug"]="Hot-plug"
+    ["high-memory"]="Performance"
+    ["large-disk"]="Performance"
+    ["minimal-resources"]="Performance"
+    ["per-host-density"]="Scale"
+    ["virt-capacity-benchmark"]="Scale"
+)
+
+test_category="Unknown"
+for key in "${!CATEGORY_MAP[@]}"; do
+    if [[ "$TEST_NAME" == *"$key"* ]]; then
+        test_category="${CATEGORY_MAP[$key]}"
+        break
+    fi
+done
+
+# =============================================================================
+# VALIDATION SUMMARY (from validation JSON files)
+# =============================================================================
+
+val_total=0
+val_passed=0
+val_failed=0
+val_skipped=0
+val_overall="UNKNOWN"
+
+search_dir="${VALIDATION_DIR:-${RESULTS_DIR}}"
+val_files=()
+while IFS= read -r -d '' f; do
+    val_files+=("$f")
+done < <(find "$search_dir" -name "validation-*.json" -type f -print0 2>/dev/null)
+
+if [[ ${#val_files[@]} -gt 0 ]]; then
+    for vf in "${val_files[@]}"; do
+        file_status=$(jq -r '.overallStatus // .status // "UNKNOWN"' "$vf" 2>/dev/null)
+        file_validations=$(jq -r '.validations // []' "$vf" 2>/dev/null)
+
+        count=$(echo "$file_validations" | jq 'length' 2>/dev/null || echo 0)
+        p=$(echo "$file_validations" | jq '[.[] | select(.status == "PASS")] | length' 2>/dev/null || echo 0)
+        f_count=$(echo "$file_validations" | jq '[.[] | select(.status == "FAIL" or .status == "FAILED")] | length' 2>/dev/null || echo 0)
+        s=$(echo "$file_validations" | jq '[.[] | select(.status == "SKIP")] | length' 2>/dev/null || echo 0)
+
+        val_total=$((val_total + count))
+        val_passed=$((val_passed + p))
+        val_failed=$((val_failed + f_count))
+        val_skipped=$((val_skipped + s))
+    done
+
+    if [[ $val_failed -gt 0 ]]; then
+        val_overall="FAILURE"
+    elif [[ $val_passed -gt 0 ]]; then
+        val_overall="SUCCESS"
+    fi
+fi
+
+# Determine test result from exit code + validation
+if [[ -n "$EXIT_CODE" && "$EXIT_CODE" != "0" ]]; then
+    test_result="FAILURE"
+elif [[ "$val_overall" == "FAILURE" ]]; then
+    test_result="FAILURE"
+elif [[ "$val_overall" == "SUCCESS" ]]; then
+    test_result="SUCCESS"
+elif [[ -n "$EXIT_CODE" && "$EXIT_CODE" == "0" ]]; then
+    test_result="SUCCESS"
+else
+    test_result="UNKNOWN"
+fi
+
+# =============================================================================
 # BUILD METADATA JSON
 # =============================================================================
 
@@ -216,6 +303,10 @@ jq -n \
     --arg testMode "${MODE:-unknown}" \
     --arg runTimestamp "${RUN_TIMESTAMP:-unknown}" \
     --arg kubeBurnerVersion "$kb_version" \
+    --arg testResult "$test_result" \
+    --argjson exitCode "${EXIT_CODE:-null}" \
+    --argjson durationSeconds "${DURATION:-null}" \
+    --arg testCategory "$test_category" \
     --arg ocpVersion "${ocp_version:-unknown}" \
     --arg clusterId "${cluster_id:-unknown}" \
     --arg platform "${platform:-unknown}" \
@@ -238,6 +329,11 @@ jq -n \
     --arg memory "$tc_memory" \
     --arg storage "$tc_storage" \
     --arg storageClassName "$tc_storageClassName" \
+    --argjson valTotal "$val_total" \
+    --argjson valPassed "$val_passed" \
+    --argjson valFailed "$val_failed" \
+    --argjson valSkipped "$val_skipped" \
+    --arg valOverall "$val_overall" \
     '{
         uuid: $uuid,
         timestamp: $timestamp,
@@ -246,6 +342,10 @@ jq -n \
         testMode: $testMode,
         runTimestamp: $runTimestamp,
         kubeBurnerVersion: $kubeBurnerVersion,
+        testResult: $testResult,
+        exitCode: $exitCode,
+        durationSeconds: $durationSeconds,
+        testCategory: $testCategory,
         cluster: {
             ocpVersion: $ocpVersion,
             clusterId: $clusterId,
@@ -277,6 +377,13 @@ jq -n \
             memory: $memory,
             storage: $storage,
             storageClassName: $storageClassName
+        },
+        validationSummary: {
+            totalPhases: $valTotal,
+            passed: $valPassed,
+            failed: $valFailed,
+            skipped: $valSkipped,
+            overallStatus: $valOverall
         }
     }' > "$metadata_file"
 

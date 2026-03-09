@@ -500,6 +500,14 @@ run_single_test() {
         logmain INFO "[$test_name] Moved kube-burner UUID logs to results directory"
     fi
     
+    local end_time=$(date +%s)
+    local duration=$((end_time - start_time))
+    
+    # Get validation info (needed by metadata-collector for enrichment)
+    local val_info=$(get_validation_info "$results_path" "$test_name")
+    local val_status=$(echo "$val_info" | cut -d'|' -f1)
+    local val_file=$(echo "$val_info" | cut -d'|' -f2)
+
     # Collect and index cluster metadata (correlated via kube-burner UUID)
     local kb_uuid=""
     local metadata_file=""
@@ -520,6 +528,9 @@ run_single_test() {
             --run-timestamp "$run_timestamp" \
             --vars-file "$temp_vars" \
             --results-dir "$results_path" \
+            --exit-code "$exit_code" \
+            --duration "$duration" \
+            --validation-dir "$results_path" \
             ${es_server:+--es-server "$es_server"} \
             --metadata-index "$metadata_index" \
             ${test_name_var:+--test-index "$test_name_var"}; then
@@ -528,17 +539,22 @@ run_single_test() {
         else
             logmain INFO "[$test_name] WARNING: Metadata collection failed (non-fatal)"
         fi
+
+        # Index validation reports to ES (separate cnv-validation index)
+        if [[ -n "$es_server" ]]; then
+            logmain INFO "[$test_name] Indexing validation reports to ES..."
+            if "${SCRIPT_DIR}/config/scripts/validation-indexer.sh" \
+                --uuid "$kb_uuid" \
+                --results-dir "$results_path" \
+                --es-server "$es_server"; then
+                logmain INFO "[$test_name] Validation indexing complete"
+            else
+                logmain INFO "[$test_name] WARNING: Validation indexing failed (non-fatal)"
+            fi
+        fi
     else
         logmain INFO "[$test_name] Skipping metadata collection (no kube-burner UUID found)"
     fi
-    
-    local end_time=$(date +%s)
-    local duration=$((end_time - start_time))
-    
-    # Get validation info
-    local val_info=$(get_validation_info "$results_path" "$test_name")
-    local val_status=$(echo "$val_info" | cut -d'|' -f1)
-    local val_file=$(echo "$val_info" | cut -d'|' -f2)
     
     # Store results
     TEST_RESULTS[$test_name]=$exit_code

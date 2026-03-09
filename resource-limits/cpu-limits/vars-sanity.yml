@@ -2,8 +2,8 @@
 # Minimal resources for quick validation testing
 
 # Test Configuration
-testNamespace: "sanity-cpu-limits-TIMESTAMP"  # TIMESTAMP replaced at runtime
-testName: 'sanity-cpu-limits'
+testNamespace: "cnv-sanity-cpu-limits-TIMESTAMP"  # TIMESTAMP replaced at runtime
+testName: 'cnv-sanity-cpu-limits'
 resultsPath: "/tmp/kube-burner-results/sanity-cpu-limits"
 runTimestamp: "run-default"  # Will be set by run-sanity-tests.sh
 
@@ -38,8 +38,8 @@ vmRunning: true
 maxWaitTimeout: "5m"
 jobPause: "1m"
 
-# Monitoring Configuration (disabled for sanity)
-esServer: ""
+# Monitoring Configuration (ES enabled, Prometheus disabled for sanity)
+esServer: "http://f01-h08-000-1029u.rdu2.scalelab.redhat.com:9200"
 metadataIndex: "cnv-metadata"
 PROM: ""
 PROM_TOKEN: ""

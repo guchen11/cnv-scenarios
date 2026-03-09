@@ -15,8 +15,8 @@
 #
 
 # Test Configuration
-testNamespace: "nic-hotplug-test"          # Namespace where test resources will be created
-testName: 'nic-hotplug-test'               # Test identifier used for labeling and metrics
+testNamespace: "cnv-nic-hotplug"           # Namespace where test resources will be created
+testName: 'cnv-nic-hotplug'                # Test identifier used for labeling and metrics (ES index)
 
 # Results Directory Structure
 resultsPath: "/tmp/kube-burner-results/nic-hotplug-test"  # Base directory for test results

@@ -1,7 +1,7 @@
 {{- $PROM := .PROM -}}
 {{- $PROM_TOKEN := .PROM_TOKEN -}}
 {{- $kubeBurnerFQDN := "kube-burner.io" -}}
-{{- $testName := "per-host-density" }}
+{{- $testName := "cnv-per-host-density" }}
 {{- $vmName := $testName -}}
 {{- $sshPublicKeySecretName := $testName -}}
 {{- $sourceStorageSizeStr := (list (.sourceStorageSize | toString) "Mi") | join "" -}}
@@ -17,7 +17,7 @@
 {{- $scaleMode := .scaleMode | default "single-node" -}}
 {{- $namespaceCount := .namespaceCount | default 1 -}}
 {{- $vmsPerNamespace := .vmsPerNamespace | default 10 -}}
-{{- $namespacePrefix := .testNamespacePrefix | default "per-host-density-test" -}}
+{{- $namespacePrefix := .testNamespacePrefix | default "cnv-per-host-density" -}}
 {{- $nsName := $namespacePrefix -}}
 ---
 metricsEndpoints:

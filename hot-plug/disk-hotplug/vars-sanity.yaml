@@ -2,8 +2,8 @@
 # Minimal resources for quick validation testing
 
 # Test Configuration
-testNamespace: "sanity-disk-hotplug-TIMESTAMP"  # TIMESTAMP replaced at runtime
-testName: 'sanity-disk-hotplug'
+testNamespace: "cnv-sanity-disk-hotplug-TIMESTAMP"  # TIMESTAMP replaced at runtime
+testName: 'cnv-sanity-disk-hotplug'
 resultsPath: "/tmp/kube-burner-results/sanity-disk-hotplug"
 runTimestamp: "run-default"  # Will be set by run-sanity-tests.sh
 
@@ -50,8 +50,8 @@ hotplugTimeout: "5m"
 # Node Targeting Configuration (optional)
 nodeSelector: ""
 
-# Monitoring Configuration (disabled for sanity)
-esServer: ""
+# Monitoring Configuration (ES enabled, Prometheus disabled for sanity)
+esServer: "http://f01-h08-000-1029u.rdu2.scalelab.redhat.com:9200"
 metadataIndex: "cnv-metadata"
 PROM: ""
 PROM_TOKEN: ""

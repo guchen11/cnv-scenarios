@@ -2,8 +2,8 @@
 # Minimal resources for quick validation testing
 
 # Test Configuration
-testNamespace: "sanity-nic-hotplug-TIMESTAMP"  # TIMESTAMP replaced at runtime
-testName: 'sanity-nic-hotplug'
+testNamespace: "cnv-sanity-nic-hotplug-TIMESTAMP"  # TIMESTAMP replaced at runtime
+testName: 'cnv-sanity-nic-hotplug'
 resultsPath: "/tmp/kube-burner-results/sanity-nic-hotplug"
 runTimestamp: "run-default"  # Will be set by run-sanity-tests.sh
 
@@ -37,8 +37,8 @@ privateKey: '/home/kni/.ssh/id_rsa'
 publicKey: '/home/kni/.ssh/id_rsa.pub'
 vmUser: 'cloud-user'
 
-# Monitoring Configuration (disabled for sanity)
-esServer: ""
+# Monitoring Configuration (ES enabled, Prometheus disabled for sanity)
+esServer: "http://f01-h08-000-1029u.rdu2.scalelab.redhat.com:9200"
 metadataIndex: "cnv-metadata"
 PROM: ""
 PROM_TOKEN: ""
