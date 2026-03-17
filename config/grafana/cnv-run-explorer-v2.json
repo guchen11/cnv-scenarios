@@ -1,59 +1,4 @@
 {
-  "__inputs": [
-    {
-      "name": "DS_CNV_ES",
-      "label": "cnv-es",
-      "type": "datasource",
-      "pluginId": "elasticsearch",
-      "pluginName": "Elasticsearch"
-    },
-    {
-      "name": "DS_CNV_METRICS",
-      "label": "cnv-metrics",
-      "type": "datasource",
-      "pluginId": "elasticsearch",
-      "pluginName": "Elasticsearch"
-    }
-  ],
-  "__elements": {},
-  "__requires": [
-    {
-      "type": "datasource",
-      "id": "elasticsearch",
-      "name": "Elasticsearch",
-      "version": "1.0.0"
-    },
-    {
-      "type": "grafana",
-      "id": "grafana",
-      "name": "Grafana",
-      "version": "10.1.5"
-    },
-    {
-      "type": "panel",
-      "id": "stat",
-      "name": "Stat",
-      "version": ""
-    },
-    {
-      "type": "panel",
-      "id": "timeseries",
-      "name": "Time series",
-      "version": ""
-    },
-    {
-      "type": "panel",
-      "id": "table",
-      "name": "Table",
-      "version": ""
-    },
-    {
-      "type": "panel",
-      "id": "state-timeline",
-      "name": "State timeline",
-      "version": ""
-    }
-  ],
   "annotations": {
     "list": [
       {
@@ -74,34 +19,43 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
-  "id": null,
+  "id": 31,
   "links": [
     {
       "icon": "dashboard",
-      "tags": ["cnv", "v2"],
+      "tags": [
+        "cnv",
+        "v2"
+      ],
+      "targetBlank": false,
       "title": "Fleet Overview v2",
       "tooltip": "Open Fleet Overview v2 dashboard",
       "type": "link",
-      "url": "/d/cnv-fleet-overview-v2/cnv-fleet-overview-v2",
-      "targetBlank": false
+      "url": "/d/cnv-fleet-overview-v2/cnv-fleet-overview-v2"
     },
     {
       "icon": "external link",
-      "tags": ["cnv", "v2"],
+      "tags": [
+        "cnv",
+        "v2"
+      ],
+      "targetBlank": false,
       "title": "Run Detail v2",
       "tooltip": "Open Run Detail v2 dashboard",
       "type": "link",
-      "url": "/d/cnv-run-detail-v2/cnv-run-detail-v2",
-      "targetBlank": false
+      "url": "/d/cnv-run-detail-v2/cnv-run-detail-v2"
     },
     {
       "icon": "compare",
-      "tags": ["cnv", "v2"],
+      "tags": [
+        "cnv",
+        "v2"
+      ],
+      "targetBlank": false,
       "title": "Run Comparison v2",
       "tooltip": "Open Run Comparison v2 dashboard",
       "type": "link",
-      "url": "/d/cnv-run-comparison-v2/cnv-run-comparison-v2",
-      "targetBlank": false
+      "url": "/d/cnv-run-comparison-v2/cnv-run-comparison-v2"
     }
   ],
   "panels": [
@@ -120,7 +74,7 @@
     {
       "datasource": {
         "type": "elasticsearch",
-        "uid": "${DS_CNV_ES}"
+        "uid": "f8127b7f-c6c0-4a3b-a2b2-8b55c747c690"
       },
       "fieldConfig": {
         "defaults": {
@@ -183,6 +137,10 @@
               "type": "date_histogram"
             }
           ],
+          "datasource": {
+            "type": "elasticsearch",
+            "uid": "f8127b7f-c6c0-4a3b-a2b2-8b55c747c690"
+          },
           "metrics": [
             {
               "id": "1",
@@ -191,11 +149,7 @@
           ],
           "query": "metricName.keyword: metadata AND testName.keyword: $workload AND cluster.ocpVersion.keyword: $ocpVersion AND cluster.platform.keyword: $platform AND operators.cnvVersion.keyword: $cnvVersion AND testConfig.storageClassName.keyword: $storageClass AND testResult.keyword: SUCCESS",
           "refId": "A",
-          "timeField": "timestamp",
-          "datasource": {
-            "type": "elasticsearch",
-            "uid": "${DS_CNV_ES}"
-          }
+          "timeField": "timestamp"
         }
       ],
       "title": "Pass Rate",
@@ -204,7 +158,7 @@
     {
       "datasource": {
         "type": "elasticsearch",
-        "uid": "${DS_CNV_ES}"
+        "uid": "f8127b7f-c6c0-4a3b-a2b2-8b55c747c690"
       },
       "fieldConfig": {
         "defaults": {
@@ -259,6 +213,10 @@
               "type": "date_histogram"
             }
           ],
+          "datasource": {
+            "type": "elasticsearch",
+            "uid": "f8127b7f-c6c0-4a3b-a2b2-8b55c747c690"
+          },
           "metrics": [
             {
               "id": "1",
@@ -267,11 +225,7 @@
           ],
           "query": "metricName.keyword: metadata AND testName.keyword: $workload AND cluster.ocpVersion.keyword: $ocpVersion AND cluster.platform.keyword: $platform AND operators.cnvVersion.keyword: $cnvVersion AND testConfig.storageClassName.keyword: $storageClass",
           "refId": "A",
-          "timeField": "timestamp",
-          "datasource": {
-            "type": "elasticsearch",
-            "uid": "${DS_CNV_ES}"
-          }
+          "timeField": "timestamp"
         }
       ],
       "title": "Total Runs",
@@ -280,7 +234,7 @@
     {
       "datasource": {
         "type": "elasticsearch",
-        "uid": "${DS_CNV_ES}"
+        "uid": "f8127b7f-c6c0-4a3b-a2b2-8b55c747c690"
       },
       "fieldConfig": {
         "defaults": {
@@ -335,20 +289,20 @@
               "type": "date_histogram"
             }
           ],
+          "datasource": {
+            "type": "elasticsearch",
+            "uid": "f8127b7f-c6c0-4a3b-a2b2-8b55c747c690"
+          },
           "metrics": [
             {
+              "field": "durationSeconds",
               "id": "1",
-              "type": "avg",
-              "field": "durationSeconds"
+              "type": "avg"
             }
           ],
           "query": "metricName.keyword: metadata AND testName.keyword: $workload AND cluster.ocpVersion.keyword: $ocpVersion AND cluster.platform.keyword: $platform AND operators.cnvVersion.keyword: $cnvVersion AND testConfig.storageClassName.keyword: $storageClass",
           "refId": "A",
-          "timeField": "timestamp",
-          "datasource": {
-            "type": "elasticsearch",
-            "uid": "${DS_CNV_ES}"
-          }
+          "timeField": "timestamp"
         }
       ],
       "title": "Avg Duration",
@@ -357,7 +311,7 @@
     {
       "datasource": {
         "type": "elasticsearch",
-        "uid": "${DS_CNV_ES}"
+        "uid": "f8127b7f-c6c0-4a3b-a2b2-8b55c747c690"
       },
       "fieldConfig": {
         "defaults": {
@@ -402,20 +356,20 @@
         {
           "alias": "",
           "bucketAggs": [],
+          "datasource": {
+            "type": "elasticsearch",
+            "uid": "f8127b7f-c6c0-4a3b-a2b2-8b55c747c690"
+          },
           "metrics": [
             {
+              "field": "cluster.clusterId.keyword",
               "id": "1",
-              "type": "cardinality",
-              "field": "cluster.clusterId.keyword"
+              "type": "cardinality"
             }
           ],
           "query": "metricName.keyword: metadata AND testName.keyword: $workload AND cluster.ocpVersion.keyword: $ocpVersion AND cluster.platform.keyword: $platform AND operators.cnvVersion.keyword: $cnvVersion AND testConfig.storageClassName.keyword: $storageClass",
           "refId": "A",
-          "timeField": "timestamp",
-          "datasource": {
-            "type": "elasticsearch",
-            "uid": "${DS_CNV_ES}"
-          }
+          "timeField": "timestamp"
         }
       ],
       "title": "Unique Clusters",
@@ -436,7 +390,7 @@
     {
       "datasource": {
         "type": "elasticsearch",
-        "uid": "${DS_CNV_ES}"
+        "uid": "f8127b7f-c6c0-4a3b-a2b2-8b55c747c690"
       },
       "fieldConfig": {
         "defaults": {
@@ -531,6 +485,10 @@
               "type": "date_histogram"
             }
           ],
+          "datasource": {
+            "type": "elasticsearch",
+            "uid": "f8127b7f-c6c0-4a3b-a2b2-8b55c747c690"
+          },
           "metrics": [
             {
               "id": "1",
@@ -539,11 +497,7 @@
           ],
           "query": "metricName.keyword: metadata AND testName.keyword: $workload AND cluster.ocpVersion.keyword: $ocpVersion AND cluster.platform.keyword: $platform AND operators.cnvVersion.keyword: $cnvVersion AND testConfig.storageClassName.keyword: $storageClass AND testResult.keyword: SUCCESS",
           "refId": "A",
-          "timeField": "timestamp",
-          "datasource": {
-            "type": "elasticsearch",
-            "uid": "${DS_CNV_ES}"
-          }
+          "timeField": "timestamp"
         },
         {
           "alias": "FAILURE",
@@ -558,6 +512,10 @@
               "type": "date_histogram"
             }
           ],
+          "datasource": {
+            "type": "elasticsearch",
+            "uid": "f8127b7f-c6c0-4a3b-a2b2-8b55c747c690"
+          },
           "metrics": [
             {
               "id": "1",
@@ -566,11 +524,7 @@
           ],
           "query": "metricName.keyword: metadata AND testName.keyword: $workload AND cluster.ocpVersion.keyword: $ocpVersion AND cluster.platform.keyword: $platform AND operators.cnvVersion.keyword: $cnvVersion AND testConfig.storageClassName.keyword: $storageClass AND testResult.keyword: FAILURE",
           "refId": "B",
-          "timeField": "timestamp",
-          "datasource": {
-            "type": "elasticsearch",
-            "uid": "${DS_CNV_ES}"
-          }
+          "timeField": "timestamp"
         }
       ],
       "title": "Pass/Fail Timeline",
@@ -591,7 +545,7 @@
     {
       "datasource": {
         "type": "elasticsearch",
-        "uid": "${DS_CNV_ES}"
+        "uid": "f8127b7f-c6c0-4a3b-a2b2-8b55c747c690"
       },
       "fieldConfig": {
         "defaults": {
@@ -677,20 +631,20 @@
               "type": "date_histogram"
             }
           ],
+          "datasource": {
+            "type": "elasticsearch",
+            "uid": "f8127b7f-c6c0-4a3b-a2b2-8b55c747c690"
+          },
           "metrics": [
             {
+              "field": "durationSeconds",
               "id": "1",
-              "type": "avg",
-              "field": "durationSeconds"
+              "type": "avg"
             }
           ],
           "query": "metricName.keyword: metadata AND testName.keyword: $workload AND cluster.ocpVersion.keyword: $ocpVersion AND cluster.platform.keyword: $platform AND operators.cnvVersion.keyword: $cnvVersion AND testConfig.storageClassName.keyword: $storageClass",
           "refId": "A",
-          "timeField": "timestamp",
-          "datasource": {
-            "type": "elasticsearch",
-            "uid": "${DS_CNV_ES}"
-          }
+          "timeField": "timestamp"
         }
       ],
       "title": "Avg Duration Over Time",
@@ -699,7 +653,7 @@
     {
       "datasource": {
         "type": "elasticsearch",
-        "uid": "${DS_CNV_ES}"
+        "uid": "f8127b7f-c6c0-4a3b-a2b2-8b55c747c690"
       },
       "fieldConfig": {
         "defaults": {
@@ -796,6 +750,10 @@
               "type": "date_histogram"
             }
           ],
+          "datasource": {
+            "type": "elasticsearch",
+            "uid": "f8127b7f-c6c0-4a3b-a2b2-8b55c747c690"
+          },
           "metrics": [
             {
               "id": "1",
@@ -804,11 +762,7 @@
           ],
           "query": "metricName.keyword: metadata AND testName.keyword: $workload AND cluster.ocpVersion.keyword: $ocpVersion AND cluster.platform.keyword: $platform AND operators.cnvVersion.keyword: $cnvVersion AND testConfig.storageClassName.keyword: $storageClass",
           "refId": "A",
-          "timeField": "timestamp",
-          "datasource": {
-            "type": "elasticsearch",
-            "uid": "${DS_CNV_ES}"
-          }
+          "timeField": "timestamp"
         }
       ],
       "title": "Runs by OCP Version",
@@ -829,7 +783,7 @@
     {
       "datasource": {
         "type": "elasticsearch",
-        "uid": "${DS_CNV_ES}"
+        "uid": "f8127b7f-c6c0-4a3b-a2b2-8b55c747c690"
       },
       "fieldConfig": {
         "defaults": {
@@ -894,9 +848,9 @@
                 "id": "links",
                 "value": [
                   {
+                    "targetBlank": true,
                     "title": "View Run Detail",
-                    "url": "/d/cnv-run-detail-v2/cnv-run-detail-v2?var-workload=$workload&var-uuid=${__value.text}",
-                    "targetBlank": true
+                    "url": "/d/cnv-run-detail-v2/cnv-run-detail-v2?var-workload=$workload&var-uuid=${__value.text}"
                   }
                 ]
               }
@@ -945,55 +899,56 @@
         {
           "alias": "",
           "bucketAggs": [],
+          "datasource": {
+            "type": "elasticsearch",
+            "uid": "f8127b7f-c6c0-4a3b-a2b2-8b55c747c690"
+          },
           "metrics": [
             {
               "id": "1",
-              "type": "raw_data",
               "settings": {
                 "size": "500"
-              }
+              },
+              "type": "raw_data"
             }
           ],
           "query": "metricName.keyword: metadata AND testName.keyword: $workload AND cluster.ocpVersion.keyword: $ocpVersion AND cluster.platform.keyword: $platform AND operators.cnvVersion.keyword: $cnvVersion AND testConfig.storageClassName.keyword: $storageClass",
           "refId": "A",
-          "timeField": "timestamp",
-          "datasource": {
-            "type": "elasticsearch",
-            "uid": "${DS_CNV_ES}"
-          }
+          "timeField": "timestamp"
         }
       ],
+      "title": "All Runs",
       "transformations": [
         {
           "id": "extractFields",
           "options": {
-            "source": "cluster",
             "format": "json",
-            "replace": true
+            "replace": true,
+            "source": "cluster"
           }
         },
         {
           "id": "extractFields",
           "options": {
-            "source": "nodes",
             "format": "json",
-            "replace": false
+            "replace": false,
+            "source": "nodes"
           }
         },
         {
           "id": "extractFields",
           "options": {
-            "source": "testConfig",
             "format": "json",
-            "replace": false
+            "replace": false,
+            "source": "testConfig"
           }
         },
         {
           "id": "extractFields",
           "options": {
-            "source": "operators",
             "format": "json",
-            "replace": false
+            "replace": false,
+            "source": "operators"
           }
         },
         {
@@ -1003,8 +958,8 @@
               "_id": true,
               "_index": true,
               "_type": true,
-              "metricName": true,
               "cluster": true,
+              "metricName": true,
               "nodes": true,
               "operators": true,
               "storage": true,
@@ -1012,35 +967,34 @@
               "validationSummary": true
             },
             "indexByName": {
-              "timestamp": 0,
-              "testResult": 1,
-              "operators.cnvVersion": 2,
-              "testConfig.storageClassName": 3,
-              "ocpVersion": 4,
-              "platform": 5,
-              "workers": 6,
-              "vmCount": 7,
               "durationSeconds": 8,
+              "ocpVersion": 4,
+              "operators.cnvVersion": 2,
+              "platform": 5,
+              "testConfig.storageClassName": 3,
+              "testName": 10,
+              "testResult": 1,
+              "timestamp": 0,
               "uuid": 9,
-              "testName": 10
+              "vmCount": 7,
+              "workers": 6
             },
             "renameByName": {
-              "timestamp": "Timestamp",
-              "testResult": "Result",
-              "operators.cnvVersion": "CNV Version",
-              "testConfig.storageClassName": "Storage Class",
-              "ocpVersion": "OCP Version",
-              "platform": "Platform",
-              "workers": "Workers",
-              "vmCount": "VM Count",
               "durationSeconds": "Duration",
+              "ocpVersion": "OCP Version",
+              "operators.cnvVersion": "CNV Version",
+              "platform": "Platform",
+              "testConfig.storageClassName": "Storage Class",
+              "testName": "Test",
+              "testResult": "Result",
+              "timestamp": "Timestamp",
               "uuid": "UUID",
-              "testName": "Test"
+              "vmCount": "VM Count",
+              "workers": "Workers"
             }
           }
         }
       ],
-      "title": "All Runs",
       "type": "table"
     }
   ],
@@ -1057,7 +1011,7 @@
         "current": {},
         "datasource": {
           "type": "elasticsearch",
-          "uid": "${DS_CNV_ES}"
+          "uid": "f8127b7f-c6c0-4a3b-a2b2-8b55c747c690"
         },
         "definition": "{\"find\": \"terms\", \"field\": \"testName.keyword\", \"query\": \"metricName.keyword: metadata\"}",
         "hide": 0,
@@ -1079,7 +1033,7 @@
         "current": {},
         "datasource": {
           "type": "elasticsearch",
-          "uid": "${DS_CNV_ES}"
+          "uid": "f8127b7f-c6c0-4a3b-a2b2-8b55c747c690"
         },
         "definition": "{\"find\": \"terms\", \"field\": \"operators.cnvVersion.keyword\", \"query\": \"metricName.keyword: metadata AND testName.keyword: $workload\"}",
         "hide": 0,
@@ -1101,7 +1055,7 @@
         "current": {},
         "datasource": {
           "type": "elasticsearch",
-          "uid": "${DS_CNV_ES}"
+          "uid": "f8127b7f-c6c0-4a3b-a2b2-8b55c747c690"
         },
         "definition": "{\"find\": \"terms\", \"field\": \"testConfig.storageClassName.keyword\", \"query\": \"metricName.keyword: metadata AND testName.keyword: $workload\"}",
         "hide": 0,
@@ -1123,7 +1077,7 @@
         "current": {},
         "datasource": {
           "type": "elasticsearch",
-          "uid": "${DS_CNV_ES}"
+          "uid": "f8127b7f-c6c0-4a3b-a2b2-8b55c747c690"
         },
         "definition": "{\"find\": \"terms\", \"field\": \"cluster.ocpVersion.keyword\", \"query\": \"metricName.keyword: metadata AND testName.keyword: $workload AND operators.cnvVersion.keyword: $cnvVersion AND testConfig.storageClassName.keyword: $storageClass\"}",
         "hide": 0,
@@ -1145,7 +1099,7 @@
         "current": {},
         "datasource": {
           "type": "elasticsearch",
-          "uid": "${DS_CNV_ES}"
+          "uid": "f8127b7f-c6c0-4a3b-a2b2-8b55c747c690"
         },
         "definition": "{\"find\": \"terms\", \"field\": \"cluster.platform.keyword\", \"query\": \"metricName.keyword: metadata AND testName.keyword: $workload AND operators.cnvVersion.keyword: $cnvVersion AND testConfig.storageClassName.keyword: $storageClass AND cluster.ocpVersion.keyword: $ocpVersion\"}",
         "hide": 0,
@@ -1229,6 +1183,6 @@
   "timezone": "browser",
   "title": "CNV Run Explorer v2",
   "uid": "cnv-run-explorer-v2",
-  "version": 0,
+  "version": 1,
   "weekStart": ""
 }
