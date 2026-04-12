@@ -21,26 +21,32 @@ ES_SERVER=""
 INDEX="cnv-validation"
 TEST_NAME_OVERRIDE=""
 
-declare -A CATEGORY_MAP=(
-    ["cpu-limits"]="Resource Limits"
-    ["memory-limits"]="Resource Limits"
-    ["disk-limits"]="Resource Limits"
-    ["disk-hotplug"]="Hot-plug"
-    ["nic-hotplug"]="Hot-plug"
-    ["high-memory"]="Performance"
-    ["large-disk"]="Performance"
-    ["minimal-resources"]="Performance"
-    ["per-host-density"]="Scale"
-    ["virt-capacity-benchmark"]="Scale"
-)
+_cnv_script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+# shellcheck source=test-category-map.sh
+source "${_cnv_script_dir}/test-category-map.sh"
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        --uuid)        UUID="$2";        shift 2 ;;
-        --results-dir) RESULTS_DIR="$2"; shift 2 ;;
-        --es-server)   ES_SERVER="$2";   shift 2 ;;
-        --test-name)   TEST_NAME_OVERRIDE="$2"; shift 2 ;;
-        --index)       INDEX="$2";       shift 2 ;;
+        --uuid)
+            UUID="$2"
+            shift 2
+            ;;
+        --results-dir)
+            RESULTS_DIR="$2"
+            shift 2
+            ;;
+        --es-server)
+            ES_SERVER="$2"
+            shift 2
+            ;;
+        --test-name)
+            TEST_NAME_OVERRIDE="$2"
+            shift 2
+            ;;
+        --index)
+            INDEX="$2"
+            shift 2
+            ;;
         *)
             echo "validation-indexer: Unknown argument: $1" >&2
             exit 1

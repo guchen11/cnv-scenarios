@@ -44,18 +44,54 @@ TEST_INDEX=""
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        --uuid)           UUID="$2";           shift 2 ;;
-        --test-name)      TEST_NAME="$2";      shift 2 ;;
-        --mode)           MODE="$2";           shift 2 ;;
-        --run-timestamp)  RUN_TIMESTAMP="$2";  shift 2 ;;
-        --vars-file)      VARS_FILE="$2";      shift 2 ;;
-        --results-dir)    RESULTS_DIR="$2";    shift 2 ;;
-        --exit-code)      EXIT_CODE="$2";      shift 2 ;;
-        --duration)       DURATION="$2";       shift 2 ;;
-        --validation-dir) VALIDATION_DIR="$2"; shift 2 ;;
-        --es-server)      ES_SERVER="$2";      shift 2 ;;
-        --metadata-index) METADATA_INDEX="$2"; shift 2 ;;
-        --test-index)     TEST_INDEX="$2";     shift 2 ;;
+        --uuid)
+            UUID="$2"
+            shift 2
+            ;;
+        --test-name)
+            TEST_NAME="$2"
+            shift 2
+            ;;
+        --mode)
+            MODE="$2"
+            shift 2
+            ;;
+        --run-timestamp)
+            RUN_TIMESTAMP="$2"
+            shift 2
+            ;;
+        --vars-file)
+            VARS_FILE="$2"
+            shift 2
+            ;;
+        --results-dir)
+            RESULTS_DIR="$2"
+            shift 2
+            ;;
+        --exit-code)
+            EXIT_CODE="$2"
+            shift 2
+            ;;
+        --duration)
+            DURATION="$2"
+            shift 2
+            ;;
+        --validation-dir)
+            VALIDATION_DIR="$2"
+            shift 2
+            ;;
+        --es-server)
+            ES_SERVER="$2"
+            shift 2
+            ;;
+        --metadata-index)
+            METADATA_INDEX="$2"
+            shift 2
+            ;;
+        --test-index)
+            TEST_INDEX="$2"
+            shift 2
+            ;;
         *)
             echo "metadata-collector: Unknown argument: $1" >&2
             exit 1
@@ -147,7 +183,7 @@ fi
 get_csv_version() {
     local namespace="$1"
     local pattern="$2"
-    oc_safe get csv -n "$namespace" -o json | \
+    oc_safe get csv -n "$namespace" -o json |
         jq -r --arg pat "$pattern" '
             [.items[] | select(.metadata.name | test($pat)) | .spec.version] | first // "N/A"
         '
@@ -298,18 +334,9 @@ fi
 # TEST CATEGORY (derived from test name)
 # =============================================================================
 
-declare -A CATEGORY_MAP=(
-    ["cpu-limits"]="Resource Limits"
-    ["memory-limits"]="Resource Limits"
-    ["disk-limits"]="Resource Limits"
-    ["disk-hotplug"]="Hot-plug"
-    ["nic-hotplug"]="Hot-plug"
-    ["high-memory"]="Performance"
-    ["large-disk"]="Performance"
-    ["minimal-resources"]="Performance"
-    ["per-host-density"]="Scale"
-    ["virt-capacity-benchmark"]="Scale"
-)
+_cnv_script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+# shellcheck source=test-category-map.sh
+source "${_cnv_script_dir}/test-category-map.sh"
 
 test_category="Unknown"
 for key in "${!CATEGORY_MAP[@]}"; do
@@ -337,7 +364,6 @@ done < <(find "$search_dir" -name "validation-*.json" -type f -print0 2>/dev/nul
 
 if [[ ${#val_files[@]} -gt 0 ]]; then
     for vf in "${val_files[@]}"; do
-        file_status=$(jq -r '.overallStatus // .status // "UNKNOWN"' "$vf" 2>/dev/null)
         file_validations=$(jq -r '.validations // []' "$vf" 2>/dev/null)
 
         count=$(echo "$file_validations" | jq 'length' 2>/dev/null || echo 0)
@@ -469,7 +495,7 @@ jq -n \
             skipped: $valSkipped,
             overallStatus: $valOverall
         }
-    }' > "$metadata_file"
+    }' >"$metadata_file"
 
 echo "metadata-collector: Metadata saved to ${metadata_file}"
 
