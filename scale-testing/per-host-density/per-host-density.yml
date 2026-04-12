@@ -170,7 +170,8 @@ jobs:
   - objectTemplate: templates/sleep-job.yml
     replicas: 1
     inputVars:
-      name: sleep-job
+      # Unique per run (parallel --all) so Job name does not collide in the iteration namespace.
+      name: sleep-{{ .runTimestamp }}
       counter: {{ .counter | toString }}
       sleepDuration: "120" # 2 minutes in seconds
 {{ end }}
