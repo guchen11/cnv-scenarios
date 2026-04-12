@@ -1,7 +1,8 @@
 {{- $PROM := .PROM -}}
 {{- $PROM_TOKEN := .PROM_TOKEN -}}
 {{- $kubeBurnerFQDN := "kube-burner.io" -}}
-{{- $testName := "cnv-per-host-density" }}
+{{- /* Must match vars testName / testNamespacePrefix (sanity vs full); drives job counter labels */ -}}
+{{- $testName := .testName | default "cnv-per-host-density" -}}
 {{- $vmName := $testName -}}
 {{- $sshPublicKeySecretName := $testName -}}
 {{- $sourceStorageSizeStr := (list (.sourceStorageSize | toString) "Mi") | join "" -}}
@@ -52,26 +53,6 @@ jobs:
     labelSelector:
       {{ $testNamespacesLabelKey }}: {{ $testName }}
 {{ end }}
-
-# Create SSH secret for VM access validation (one per namespace)
-- name: create-ssh-secret
-  jobType: create
-  jobIterations: {{ $namespaceCount }}
-  qps: 5
-  burst: 10
-  namespacedIterations: true
-  namespace: {{ $namespacePrefix }}
-  namespaceLabels:
-    {{ $testNamespacesLabelKey }}: {{ $testNamespacesLabelValue }}
-  maxWaitTimeout: 5m
-  jobPause: 10s
-  cleanup: false
-  objects:
-  - objectTemplate: templates/ssh-secret.yml
-    replicas: 1
-    inputVars:
-      name: {{ .testName }}-ssh
-      publicKey: {{ .publicKey }}
 
 # Create source DataVolume first (one per namespace).
 # customStatusPaths: kube-burner evaluates `key` as jq against the object's .status
@@ -127,6 +108,14 @@ jobs:
   defaultMissingKeysWithZero: true
   beforeCleanup: "config/scripts/check.sh check_vm_running {{ $jobCounterLabelKey }} {{ $jobCounterLabelValue }} all {{ .privateKey }} {{ .vmUser }} {{ .percentage_of_vms_to_validate | default 25 }} {{ .max_ssh_retries | default 8 }} {{ .resultsPath }}/{{ .runTimestamp }}/iteration-{{ .counter }}"
   objects:
+  # SSH secret in the same job as VMs (see cpu-limits-test.yml). A separate
+  # create-only job can leave the secret missing before VM start under kube-burner v2.
+  - objectTemplate: templates/ssh-secret.yml
+    runOnce: true
+    replicas: 1
+    inputVars:
+      name: {{ $testName }}-ssh
+      publicKey: {{ .publicKey }}
   - objectTemplate: vm-per-host-template.yml
     replicas: {{ $vmsPerNamespace }}
     waitOptions:
@@ -135,7 +124,7 @@ jobs:
     inputVars:
       name: {{ $vmName }}
       counter: {{ .counter | toString }}
-      sshPublicKeySecret: {{ .testName }}-ssh
+      sshPublicKeySecret: {{ $testName }}-ssh
       OS: alpine
       cpuRequest: {{ .vmCpuRequest }}
       cpuLimit: {{ .vmCpuLimit }}
