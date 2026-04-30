@@ -111,3 +111,6 @@ PROM_TOKEN: ""                         # Prometheus token (set via environment t
 
 # VM Image Configuration
 imageUrl: "https://dl-cdn.alpinelinux.org/alpine/v3.22/releases/cloud/generic_alpine-3.22.0-x86_64-bios-cloudinit-r0.qcow2"  # Alpine Linux cloud image URL for VM creation
+
+# Delay between namespace iterations (lower = faster at scale)
+jobIterationDelay: 5s

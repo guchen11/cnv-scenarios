@@ -96,7 +96,7 @@ jobs:
   verifyObjects: true
   errorOnVerify: true
   # interval between jobs execution
-  jobIterationDelay: 20s
+  jobIterationDelay: {{ .jobIterationDelay | default "5s" }}
   # wait all VMI be in the Ready Condition
   waitWhenFinished: false
   podWait: true
