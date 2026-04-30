@@ -487,6 +487,17 @@ run_single_test() {
         sed -i "s#^esServer:.*#esServer: \"${esServer}\"#" "$temp_vars"
     fi
 
+    # Apply environment variable overrides to kube-burner vars file.
+    # Any key in the vars file that matches a set env var gets overridden,
+    # so CLI callers can do: namespaceCount=500 ./run-workloads.sh per-host-density
+    while IFS= read -r _key; do
+        if [[ -n "${!_key+x}" ]]; then
+            _val="${!_key}"
+            sed -i "s|^${_key}:.*|${_key}: ${_val}|" "$temp_vars"
+            logmain DEBUG "[$test_name] Override: ${_key}=${_val}"
+        fi
+    done < <(grep -oP '^[a-zA-Z_][a-zA-Z0-9_]*(?=:)' "$temp_vars")
+
     logmain INFO "[$test_name] Starting test"
     logmain INFO "[$test_name] Mode: $MODE"
     logmain INFO "[$test_name] Config: $config_file"
