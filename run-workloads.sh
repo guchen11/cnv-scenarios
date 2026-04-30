@@ -365,7 +365,9 @@ cleanup_per_host_density() {
         logmain INFO "[per-host-density] Cleanup enabled - deleting test namespaces..."
         
         # Delete namespaces with the test label
-        local deleted_count=$(kubectl delete ns -l kube-burner.io/test-name=per-host-density --wait=false 2>/dev/null | wc -l || echo "0")
+        # Read testName from vars (label value must match what kube-burner set)
+        local test_name="${testName:-$(get_yaml_value "testName" "$vars_file" "cnv-per-host-density")}"
+        local deleted_count=$(kubectl delete ns -l "kube-burner.io/test-name=${test_name}" --wait=false 2>/dev/null | wc -l || echo "0")
         
         if [[ "$deleted_count" -gt 0 ]]; then
             logmain INFO "[per-host-density] Initiated deletion of namespaces (running in background)"
@@ -486,6 +488,17 @@ run_single_test() {
     if [[ -n "${esServer:-}" ]]; then
         sed -i "s#^esServer:.*#esServer: \"${esServer}\"#" "$temp_vars"
     fi
+
+    # Apply environment variable overrides to kube-burner vars file.
+    # Any key in the vars file that matches a set env var gets overridden,
+    # so CLI callers can do: namespaceCount=500 ./run-workloads.sh per-host-density
+    while IFS= read -r _key; do
+        if [[ -n "${!_key+x}" ]]; then
+            _val="${!_key}"
+            sed -i "s|^${_key}:.*|${_key}: ${_val}|" "$temp_vars"
+            logmain DEBUG "[$test_name] Override: ${_key}=${_val}"
+        fi
+    done < <(grep -oP '^[a-zA-Z_][a-zA-Z0-9_]*(?=:)' "$temp_vars")
 
     # Apply environment variable overrides to kube-burner vars file.
     # Any key in the vars file that matches a set env var gets overridden,
