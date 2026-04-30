@@ -111,7 +111,6 @@ jobs:
   # SSH secret in the same job as VMs (see cpu-limits-test.yml). A separate
   # create-only job can leave the secret missing before VM start under kube-burner v2.
   - objectTemplate: templates/ssh-secret.yml
-    runOnce: true
     replicas: 1
     inputVars:
       name: {{ $testName }}-ssh
