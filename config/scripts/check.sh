@@ -61,6 +61,18 @@ MAX_SHORT_WAITS=12
 SHORT_WAIT=5
 LONG_WAIT=30
 
+# Require virtctl >= 1.6 (vm/ prefix syntax for ssh)
+VIRTCTL_VERSION=$(virtctl version --client 2>/dev/null | grep -oP 'GitVersion:"v\K[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+VIRTCTL_MAJOR=$(echo "${VIRTCTL_VERSION}" | cut -d. -f1)
+VIRTCTL_MINOR=$(echo "${VIRTCTL_VERSION}" | cut -d. -f2)
+if [ -z "${VIRTCTL_VERSION}" ]; then
+    echo "ERROR: virtctl not found or version unreadable"
+    exit 1
+elif [ "${VIRTCTL_MAJOR:-0}" -lt 1 ] || { [ "${VIRTCTL_MAJOR}" -eq 1 ] && [ "${VIRTCTL_MINOR:-0}" -lt 6 ]; }; then
+    echo "ERROR: virtctl >= 1.6 required (found v${VIRTCTL_VERSION}). SSH target format changed in 1.6."
+    exit 1
+fi
+
 # Check if virtctl supports --local-ssh flag
 if virtctl ssh --help | grep -qc "\--local-ssh " ; then
     LOCAL_SSH="--local-ssh"
@@ -100,7 +112,7 @@ remote_command() {
         --local-ssh-opts="-o PasswordAuthentication=no" \
         --local-ssh-opts="-o PreferredAuthentications=publickey" \
         --local-ssh-opts="-o ConnectTimeout=30" \
-        -n "${namespace}" -i "${identity_file}" -c "${command}" --username "${remote_user}" "${vm_name}" 2>/dev/null)
+        -n "${namespace}" -i "${identity_file}" -c "${command}" --username "${remote_user}" "vm/${vm_name}" 2>/dev/null)
     local ret=$?
     if [ $ret -ne 0 ]; then
         return 1
@@ -122,7 +134,7 @@ remote_command_password() {
         --local-ssh-opts="-o StrictHostKeyChecking=no" \
         --local-ssh-opts="-o UserKnownHostsFile=/dev/null" \
         --local-ssh-opts="-o ConnectTimeout=30" \
-        -n "${namespace}" -c "${command}" --username "${remote_user}" "${vm_name}" 2>/dev/null)
+        -n "${namespace}" -c "${command}" --username "${remote_user}" "vm/${vm_name}" 2>/dev/null)
     local ret=$?
     if [ $ret -ne 0 ]; then
         return 1
@@ -240,17 +252,19 @@ check_cpu_limits() {
     local label_key="$1"
     local label_value="$2"
     local namespace="$3"
-    local expected_cpu="$4"
-    local private_key="$5"
-    local vm_user="$6"
-    local results_dir="${7:-/tmp/kube-burner-validations}"
+    local expected_cores="${4:-1}"
+    local expected_sockets="${5:-1}"
+    local private_key="$6"
+    local vm_user="$7"
+    local results_dir="${8:-/tmp/kube-burner-validations}"
+    local expected_cpu=$(( expected_cores * expected_sockets ))
     
     echo "=============================================="
     echo "  CPU Limits Validation"
     echo "=============================================="
     echo "Namespace: ${namespace}"
     echo "Label: ${label_key}=${label_value}"
-    echo "Expected CPU Cores: ${expected_cpu}"
+    echo "Expected vCPUs: ${expected_cpu} (${expected_cores}c x ${expected_sockets}s)"
     echo "SSH User: ${vm_user}"
     echo "Results: ${results_dir}"
     echo "----------------------------------------------"
@@ -279,23 +293,27 @@ check_cpu_limits() {
     local stress_ng_validation_status="SKIP"
     local overall_status="SUCCESS"
     
-    # Phase 2: Check VM spec CPU cores
+    # Phase 2: Check VM spec total vCPUs (cores * sockets)
     echo ""
-    echo "[Phase 2/4] Checking VM spec CPU cores..."
+    echo "[Phase 2/4] Checking VM spec vCPU count..."
     for vm in ${vms}; do
         echo "  Checking ${vm}..."
         
-        local actual_cpu
-        actual_cpu=$(oc get vm -n "${namespace}" "${vm}" -o jsonpath='{.spec.template.spec.domain.cpu.cores}')
+        local spec_cores spec_sockets actual_cpu
+        spec_cores=$(oc get vm -n "${namespace}" "${vm}" -o jsonpath='{.spec.template.spec.domain.cpu.cores}')
+        spec_sockets=$(oc get vm -n "${namespace}" "${vm}" -o jsonpath='{.spec.template.spec.domain.cpu.sockets}')
+        spec_cores=${spec_cores:-1}
+        spec_sockets=${spec_sockets:-1}
+        actual_cpu=$(( spec_cores * spec_sockets ))
         
         if [ "${actual_cpu}" != "${expected_cpu}" ]; then
-            echo "  ✗ ${vm}: CPU cores mismatch. Expected: ${expected_cpu}, Actual: ${actual_cpu}"
-            log_validation_checkpoint "vm_spec_cpu_cores" "FAIL" "Expected ${expected_cpu}, got ${actual_cpu}"
+            echo "  ✗ ${vm}: vCPU count mismatch. Expected: ${expected_cpu}, Actual: ${actual_cpu} (cores=${spec_cores} * sockets=${spec_sockets})"
+            log_validation_checkpoint "vm_spec_cpu_count" "FAIL" "Expected ${expected_cpu}, got ${actual_cpu} (${spec_cores}c x ${spec_sockets}s)"
             overall_status="FAILED"
             break
         fi
-        echo "  ✓ ${vm}: ${actual_cpu} CPU cores in spec"
-        log_validation_checkpoint "vm_spec_cpu_cores" "PASS" "VM ${vm}: ${actual_cpu} CPU cores in spec"
+        echo "  ✓ ${vm}: ${actual_cpu} vCPUs in spec (cores=${spec_cores} * sockets=${spec_sockets})"
+        log_validation_checkpoint "vm_spec_cpu_count" "PASS" "VM ${vm}: ${actual_cpu} vCPUs (${spec_cores}c x ${spec_sockets}s)"
     done
     
     # Phase 3: Guest OS CPU validation
@@ -402,7 +420,7 @@ check_cpu_limits() {
 {
     "label_key": "${label_key}",
     "label_value": "${label_value}",
-    "expected_cpu_cores": ${expected_cpu},
+    "expected_vcpus": ${expected_cpu},
     "vm_count": ${vm_count},
     "ssh_validation_enabled": $([ -n "${private_key}" ] && echo "true" || echo "false"),
     "total_duration_seconds": ${duration}
@@ -433,7 +451,7 @@ PARAMS
     validations_json=$(cat <<VALIDATIONS
 [
     {"phase": "vm_discovery", "status": "PASS", "message": "Found ${vm_count} VMs"},
-    {"phase": "vm_spec_cpu_cores", "status": "${spec_status}", "message": "VM spec CPU cores validation (${expected_cpu} cores)"},
+    {"phase": "vm_spec_cpu_count", "status": "${spec_status}", "message": "VM spec vCPU count validation (${expected_cpu} vCPUs via sockets topology)"},
     {"phase": "guest_os_cpu_count", "status": "${guest_os_validation_status}", "message": "${guest_os_msg}"},
     {"phase": "stress_ng_processes", "status": "${stress_ng_validation_status}", "message": "${stress_ng_msg}"}
 ]
@@ -1136,45 +1154,26 @@ check_nic_hotplug() {
     local private_key="${5:-}"
     local vm_user="${6:-}"
     local validate_guest_os="${7:-true}"
-    local arg8="${8:-}"
-    local arg9="${9:-}"
-    local results_dir
-    local nncp_run_id=""
-    if [[ -n "${arg9}" ]]; then
-        nncp_run_id="${arg8}"
-        results_dir="${arg9}"
-    else
-        results_dir="${arg8:-/tmp/kube-burner-validations}"
-    fi
-
-    local nncp_simple_lbl="test-type=nic-hotplug-simple"
-    local nncp_vlan_lbl="test-type=nic-hotplug-vlan"
-    if [[ -n "${nncp_run_id}" ]]; then
-        nncp_simple_lbl="test-type=nic-hotplug-simple,cnv-scenarios.io/run=${nncp_run_id}"
-        nncp_vlan_lbl="test-type=nic-hotplug-vlan,cnv-scenarios.io/run=${nncp_run_id}"
-    fi
-
+    local results_dir="${8:-/tmp/kube-burner-validations}"
+    
     echo "=========================================="
     echo "NIC Hot-plug Validation"
     echo "=========================================="
     echo "Namespace: ${namespace}"
     echo "Expected NICs: ${expected_nic_count}"
     echo "Validate Guest OS: ${validate_guest_os}"
-    if [[ -n "${nncp_run_id}" ]]; then
-        echo "NNCP run scope: cnv-scenarios.io/run=${nncp_run_id}"
-    fi
     echo ""
     
     # 1. Validate NodeNetworkConfigurationPolicies (NNCPs)
     echo "[1/5] Validating NodeNetworkConfigurationPolicies..."
     
     local nncp_simple_count
-    nncp_simple_count=$(oc get nncp -l "${nncp_simple_lbl}" --no-headers 2>/dev/null | wc -l 2>/dev/null || echo "0")
+    nncp_simple_count=$(oc get nncp -l test-type=nic-hotplug-simple --no-headers 2>/dev/null | wc -l 2>/dev/null || echo "0")
     nncp_simple_count=$(echo "${nncp_simple_count}" | head -1 | tr -cd '0-9')
     nncp_simple_count=${nncp_simple_count:-0}
     
     local nncp_vlan_count
-    nncp_vlan_count=$(oc get nncp -l "${nncp_vlan_lbl}" --no-headers 2>/dev/null | wc -l 2>/dev/null || echo "0")
+    nncp_vlan_count=$(oc get nncp -l test-type=nic-hotplug-vlan --no-headers 2>/dev/null | wc -l 2>/dev/null || echo "0")
     nncp_vlan_count=$(echo "${nncp_vlan_count}" | head -1 | tr -cd '0-9')
     nncp_vlan_count=${nncp_vlan_count:-0}
     
@@ -1191,10 +1190,10 @@ check_nic_hotplug() {
     # Check NNCP status (Available condition)
     # Query both simple and vlan NNCPs separately since regex selector is not supported
     local nncp_ready_count
-    nncp_ready_count=$(oc get nncp -l "${nncp_simple_lbl}" -o json 2>/dev/null | \
+    nncp_ready_count=$(oc get nncp -l test-type=nic-hotplug-simple -o json 2>/dev/null | \
         jq '[.items[] | select(.status.conditions[]? | select(.type=="Available" and .status=="True"))] | length' 2>/dev/null || echo "0")
     local nncp_vlan_ready_count
-    nncp_vlan_ready_count=$(oc get nncp -l "${nncp_vlan_lbl}" -o json 2>/dev/null | \
+    nncp_vlan_ready_count=$(oc get nncp -l test-type=nic-hotplug-vlan -o json 2>/dev/null | \
         jq '[.items[] | select(.status.conditions[]? | select(.type=="Available" and .status=="True"))] | length' 2>/dev/null || echo "0")
     # Sanitize and sum
     nncp_ready_count=$(echo "${nncp_ready_count}" | head -1 | tr -cd '0-9')
@@ -1209,8 +1208,8 @@ check_nic_hotplug() {
     if [ "${nncp_ready_count}" -ne "${total_nncp_count}" ]; then
         echo "  ERROR: Not all NNCPs are in Ready state"
         echo "  Degraded NNCPs:"
-        oc get nncp -l "${nncp_simple_lbl}"
-        oc get nncp -l "${nncp_vlan_lbl}"
+        oc get nncp -l test-type=nic-hotplug-simple
+        oc get nncp -l test-type=nic-hotplug-vlan
         log_validation_checkpoint "nncp_status" "FAIL" "Only ${nncp_ready_count}/${total_nncp_count} NNCPs Ready"
         return 1
     fi
